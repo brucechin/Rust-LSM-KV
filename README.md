@@ -23,21 +23,23 @@ implement a Log-Structured Merge tree based key-value store in Rust language. ac
     8. range operation
     9. merge() //compact multiple SSTable to a larger one and remove duplicate entries and only save the latest unique entry.
 3. File helper
-    1. read(pos, len)
-    2. write(pos)
+    1. read(filename, pos, len)
+    2. write(filename, pos, data)
 
 
 
 **Test cases**
 
-1. test open database file
+1. test open/close database file
 2. test put(key, value) operations
 3. test put(key, value) then get(key) operations
 4. test put(key, value) then delete(key) operations.
 5. test put(key, value) then update(key) operations.
 6. test range operations
-7. test throughput under different workloads(read/write ratio)
+7. test/benchmarking throughput under different workloads(read/write ratio)
 
 
 **Example**
+
+
 
