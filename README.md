@@ -1,12 +1,14 @@
-# Rust-LSM-KV
+# Key-Value Store using LSM tree
+
+Jiecheng Shi([@Dominicsjc](https://github.com/Dominicsjc)) and Lianke Qin([@brucechin](https://github.com/brucechin))
 
 **Goal**
 
-implement a Log-Structured Merge tree based key-value store in Rust language. achieve high performance read and write operations. support range read operation. support parallel operation. 
+implement a Log-Structured Merge tree based key-value store in Rust language. achieve high performance read and write operations. support range read operation. support parallel operation. Use bloom filter to improve read efficiency. memtable is append-only to improve the throughput for write-dominated workloads. When a memtable reach its full capacity, it will be flushed back to disk for persistence.
 
 **API design**
 
-1. bloom filter(https://en.wikipedia.org/wiki/Bloom_filter)
+1. [Bloom filter](https://en.wikipedia.org/wiki/Bloom_filter)
     1. bloom_check
     2. bloom_add
     3. other hash functions
@@ -19,7 +21,10 @@ implement a Log-Structured Merge tree based key-value store in Rust language. ac
     6. put(key, value)
     7. delete(key)
     8. range operation
-    9. merge()
+    9. merge() //compact multiple SSTable to a larger one and remove duplicate entries and only save the latest unique entry.
+3. File helper
+    1. read(pos, len)
+    2. write(pos)
 
 
 
@@ -35,3 +40,4 @@ implement a Log-Structured Merge tree based key-value store in Rust language. ac
 
 
 **Example**
+
