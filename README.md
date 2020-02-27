@@ -12,7 +12,7 @@ implement a Log-Structured Merge tree based key-value store in Rust language. ac
     1. bloom_check
     2. bloom_add
     3. other hash functions
-2. LSM tree
+2. [LSM tree](https://en.wikipedia.org/wiki/Log-structured_merge-tree)
     1. new(data-file-path)
     2. deconstructor()
     3. search_buffer(key)
