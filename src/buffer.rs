@@ -27,13 +27,13 @@ impl Buffer {
         }
     }
 
-    pub fn range(&self, start: KeyT, end: KeyT) -> Vec<EntryT> {
+    pub fn range(&self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
         let lower_bound = EntryT {
-            key: start,
+            key: start.clone(),
             value: ValueT::default(),
         };
         let upper_bound = EntryT {
-            key: end,
+            key: end.clone(),
             value: ValueT::default(),
         };
         let mut res: Vec<EntryT> = Vec::new();
