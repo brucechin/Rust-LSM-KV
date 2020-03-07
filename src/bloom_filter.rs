@@ -1,13 +1,11 @@
-extern crate bit_vec;
-
 //extern crate rand;
 //use rand::Rng;
 //use rand::prelude::*;
-use crate::global_conf;
+use crate::data_type;
 use bit_vec::BitVec;
-use rand::thread_rng;
-use rand::Rng;
-use std::ptr::hash;
+//use rand::thread_rng;
+//use rand::Rng;
+//use std::ptr::hash;
 
 pub type IndexT = u64;
 
@@ -21,10 +19,10 @@ pub struct BloomFilter {
 
 impl BloomFilter {
     pub fn new(&mut self) {
-        self.hashes = global_conf::HASHES;
-        self.size = global_conf::BLOOM_SIZE;
+        self.hashes = data_type::HASHES;
+        self.size = data_type::BLOOM_SIZE;
         self.count = 0;
-        self.table = BitVec::from_elem(global_conf::BLOOM_SIZE as usize, false);
+        self.table = BitVec::from_elem(data_type::BLOOM_SIZE as usize, false);
     }
 
     pub fn set_bit(&mut self, i: IndexT) {

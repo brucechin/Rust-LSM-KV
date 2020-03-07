@@ -1,22 +1,65 @@
-use crate::run;
-use std::collections::HashSet;
+use crate::data_type::{EntryT, KeyT, ValueT};
+use std::collections::BTreeSet;
+use std::ops::Bound::Included;
 
 pub struct Buffer {
     pub max_size: usize,
-    pub entries: HashSet<run::Entry>,
+    pub entries: BTreeSet<EntryT>,
 }
 
 impl Buffer {
     pub fn new(size: usize) -> Buffer {
-        //        Buffer{
-        //            max_size : size,
-        //            entries : HashSet<run::Entry>::new()
-        //        }
+        Buffer {
+            max_size: size,
+            entries: BTreeSet::new(),
+        }
     }
 
-    pub fn get(key: Vec<u8>) -> Vec<u8> {}
+    pub fn get(&self, key: KeyT) -> Option<ValueT> {
+        let search_entry = EntryT {
+            key: key,
+            value: ValueT::default(),
+        };
+        if let Some(entry) = self.entries.get(&search_entry) {
+            Some(entry.value.clone())
+        } else {
+            None
+        }
+    }
 
-    pub fn range(key1: Vec<u8>, key2: Vec<u8>) -> Vec<Vec<u8>> {}
+    pub fn range(&self, start: KeyT, end: KeyT) -> Vec<EntryT> {
+        let lower_bound = EntryT {
+            key: start,
+            value: ValueT::default(),
+        };
+        let upper_bound = EntryT {
+            key: end,
+            value: ValueT::default(),
+        };
+        let mut res: Vec<EntryT> = Vec::new();
+        for elem in self
+            .entries
+            .range((Included(lower_bound), Included(upper_bound)))
+        {
+            res.push(elem.clone());
+        }
+        res
+    }
 
-    pub fn put(entry: run::Entry) -> bool {}
+    pub fn put(&mut self, key: KeyT, value: ValueT) -> bool {
+        if self.entries.len() == self.max_size {
+            false
+        } else {
+            let entry = EntryT {
+                key: key,
+                value: value,
+            };
+            self.entries.replace(entry);
+            true
+        }
+    }
+
+    pub fn empty(&mut self) {
+        self.entries.clear();
+    }
 }

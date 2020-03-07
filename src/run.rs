@@ -1,8 +1,5 @@
 use crate::bloom_filter;
-
-pub struct Entry {
-    //TODO key and value set as i32 or Vec<u8>? if Vec<u8> we should fix its size for easier implementation. not sure about how to handle disk I/O problem.
-}
+use crate::data_type;
 
 pub struct Run {
     pub bloom_filer: bloom_filter::BloomFilter,
@@ -10,13 +7,15 @@ pub struct Run {
     //in cs265-lsm, one run is a SSTable, corresponding to one file on disk.
     pub size: usize,
     //current size
-    pub capacity: usize,  //after reach capacity, sort it then become immutable
+    pub capacity: usize, //after reach capacity, sort it then become immutable
 }
 
 impl Run {
     pub fn new() {}
 
-    pub fn get(key: Vec<u8>) -> Vec<u8> {}
+    pub fn get(key: data_type::KeyT) -> Vec<u8> {
+        unimplemented!()
+    }
 
-    pub fn put(entry: Entry) {}
+    pub fn put(entry: data_type::EntryT) {}
 }
