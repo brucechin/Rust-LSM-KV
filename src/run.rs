@@ -104,7 +104,7 @@ impl Run {
         unimplemented!()
     }
 
-    pub fn range(&self, start: KeyT, end: KeyT) -> Vec<EntryT> {
+    pub fn range(&self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
         unimplemented!()
     }
 

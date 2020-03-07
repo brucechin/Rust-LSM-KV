@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 pub struct Level {
     pub runs: VecDeque<run::Run>,
     pub max_runs: usize,
-    //TODO do we need max_run_size variable in cs265-lsm code?
+    pub max_run_size: usize,
 }
 
 impl Level {
