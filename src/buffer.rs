@@ -46,20 +46,23 @@ impl Buffer {
         res
     }
 
-    pub fn put(&mut self, key: KeyT, value: ValueT) -> bool {
-        if self.entries.len() == self.max_size {
-            false
-        } else {
-            let entry = EntryT {
-                key: key,
-                value: value,
-            };
-            self.entries.replace(entry);
-            true
-        }
+    pub fn put(&mut self, key: KeyT, value: ValueT) {
+        let entry = EntryT {
+            key: key,
+            value: value,
+        };
+        self.entries.replace(entry);
     }
 
     pub fn empty(&mut self) {
         self.entries.clear();
+    }
+
+    pub fn full(&self) -> bool {
+        if self.entries.len() == self.max_size {
+            true
+        } else {
+            false
+        }
     }
 }
