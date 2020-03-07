@@ -1,28 +1,47 @@
 //extern crate rand;
-//use rand::Rng;
-//use rand::prelude::*;
 use crate::data_type;
 use bit_vec::BitVec;
-//use rand::thread_rng;
-//use rand::Rng;
+//use rand::prelude::*;
+use rand::thread_rng;
+use rand::Rng;
 //use std::ptr::hash;
 
 pub type IndexT = u64;
 
 #[derive(Debug)]
 pub struct BloomFilter {
-    pub hashes: IndexT,
-    pub size: IndexT,
-    pub count: IndexT,
-    pub table: bit_vec::BitVec,
+    hashes: IndexT,
+    size: IndexT,
+    count: IndexT,
+    table: bit_vec::BitVec,
 }
 
 impl BloomFilter {
-    pub fn new(&mut self) {
-        self.hashes = data_type::HASHES;
-        self.size = data_type::BLOOM_SIZE;
-        self.count = 0;
-        self.table = BitVec::from_elem(data_type::BLOOM_SIZE as usize, false);
+    pub fn new_init() -> BloomFilter {
+        BloomFilter {
+            hashes: data_type::HASHES,
+            size: data_type::BLOOM_SIZE,
+            count: 0,
+            table: BitVec::from_elem(data_type::BLOOM_SIZE as usize, false),
+        }
+    }
+
+    pub fn new(hashes: IndexT, size: IndexT, count: IndexT) -> BloomFilter {
+        BloomFilter {
+            hashes: hashes,
+            size: size,
+            count: count,
+            table: BitVec::from_elem(size as usize, false),
+        }
+    }
+
+    pub fn new_with_size(size: IndexT) -> BloomFilter {
+        BloomFilter {
+            hashes: data_type::HASHES,
+            size: size,
+            count: 0,
+            table: BitVec::from_elem(size as usize, false),
+        }
     }
 
     pub fn set_bit(&mut self, i: IndexT) {
@@ -94,12 +113,7 @@ impl BloomFilter {
 
 #[test]
 fn test_bloom() {
-    let mut b = BloomFilter {
-        hashes: 3,
-        size: 128,
-        count: 1,
-        table: BitVec::from_elem(128, false),
-    };
+    let mut b = BloomFilter::new(3, 128, 1);
     b.set_bit(0);
     let temp: Option<bool> = b.get_bit(0);
     let temp1: Option<bool> = b.get_bit(1);
@@ -112,12 +126,7 @@ fn test_bloom() {
 fn test_hash() {
     //esting hash
     let test_keys: [IndexT; 6] = [0, 1, 2, 3, 13, 97];
-    let mut b = BloomFilter {
-        hashes: 3,
-        size: 128,
-        count: 1,
-        table: BitVec::from_elem(128, false),
-    };
+    let mut b = BloomFilter::new(3, 128, 1);
     b.hash1(1);
     assert_eq!(b.hash1(test_keys[0]), 8633297058295171728);
     assert_eq!(b.hash1(test_keys[5]), 14582706179898628597);
@@ -125,13 +134,7 @@ fn test_hash() {
 
 #[test]
 fn test_bloom_basic() {
-    let mut b: BloomFilter = BloomFilter {
-        hashes: 3,
-        size: 1000,
-        count: 1,
-        //table:BitVec::with_capacity(bloom_size)
-        table: BitVec::from_elem(1000, false),
-    };
+    let mut b: BloomFilter = BloomFilter::new(3, 1000, 1);
     for k in 0..71 {
         b.bloom_add(k);
     }
@@ -144,29 +147,17 @@ fn test_bloom_basic() {
 
 #[test]
 fn test_bloom_occupancy() {
-    let _size_bits: IndexT = 1000000;
-    let mut b: BloomFilter = BloomFilter {
-        hashes: 7,
-        size: _size_bits,
-        count: 1,
-        //table:BitVec::with_capacity(bloom_size)
-        table: BitVec::from_elem(_size_bits as usize, false),
-    };
-    for k in 1.._size_bits {
+    let size_bits: IndexT = 1000000;
+    let mut b: BloomFilter = BloomFilter::new(7, size_bits, 1);
+    for k in 1..size_bits {
         b.bloom_add(k);
     }
 }
 
 #[test]
 fn test_bloom_false_positive() {
-    let _size_bits: IndexT = 1000000;
-    let mut b: BloomFilter = BloomFilter {
-        hashes: 7,
-        size: _size_bits,
-        count: 1,
-        //table:BitVec::with_capacity(bloom_size)
-        table: BitVec::from_elem(_size_bits as usize, false),
-    };
+    let size_bits: IndexT = 1000000;
+    let mut b: BloomFilter = BloomFilter::new(7, size_bits, 1);
     let rand_max: IndexT = 100000000;
     let top: IndexT = 100000;
     let mut test_occurences: IndexT = 0;
