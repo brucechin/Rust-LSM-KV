@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 /*
  *  use for components

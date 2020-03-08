@@ -4,13 +4,12 @@ use libc;
 use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
-use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
 use std::os::raw::c_void;
 use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub struct Run {
     bloom_filer: bloom_filter::BloomFilter,
@@ -152,7 +151,7 @@ impl Run {
         unimplemented!()
     }
 
-    pub fn put(&mut self, key: KeyT, value: ValueT) -> bool {
+    pub fn put(&mut self, key: &KeyT, value: &ValueT) -> bool {
         unimplemented!()
     }
 

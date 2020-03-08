@@ -1,19 +1,19 @@
 use crate::buffer;
-use crate::data_type::{Entry, ValueT, TOMBSTONE};
+use crate::data_type::{EntryT, ValueT, TOMBSTONE};
 use crate::level;
 use crate::run;
 use rand::distributions::weighted::WeightedError::TooMany;
-use spinlock::Spinlock;
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::ptr::null;
-use threadpool::ThreadPool;
 use std::sync::{Arc, Mutex};
+use threadpool::ThreadPool;
 
 pub struct LSMTree {
     //TODO need threadpool, multiple-levels, in-memory buffer
     levels: Vec<level::Level>,
     buffer: buffer::Buffer,
-    workerpool: threadpool::ThreadPool,
+    worker_pool: threadpool::ThreadPool,
     bf_bits_per_entry: u64, //used for bloom filter initialization
 }
 
@@ -33,9 +33,11 @@ impl LSMTree {
     }
 
     //compact level i data to level i+1
-    pub fn merge_down(&self) {unimplemented!()}
+    pub fn merge_down(&self) {
+        unimplemented!()
+    }
 
-    pub fn put(&mut self, entry: Entry) -> bool {
+    pub fn put(&mut self, entry: EntryT) -> bool {
         //TODO entry must be fixed size for easier put implementation.
         if self.buffer.full() == false {
             //put to buffer success
@@ -52,20 +54,16 @@ impl LSMTree {
             /*
              * Flush the buffer to level 0.
              */
-            self.levels[0].runs.push_front(run::Run::new(
-                self.levels[0].max_run_size as u64,
-                self.bf_bits_per_entry,
-            ));
-            self.levels[0].runs.front().unwrap().map_write();
+            let size = self.levels[0].max_run_size as u64;
+            self.levels[0]
+                .runs
+                .push_front(run::Run::new(size, self.bf_bits_per_entry));
+            self.levels[0].runs[0].map_write();
 
-            for entry_in_buf in self.buffer.entries {
-                self.levels[0]
-                    .runs
-                    .front()
-                    .unwrap()
-                    .put(entry_in_buf.key, entry_in_buf.value);
+            for entry_in_buf in self.buffer.entries.iter() {
+                self.levels[0].runs[0].put(&entry_in_buf.key, &entry_in_buf.value);
             }
-            self.levels[0].runs.front().unwrap().unmap();
+            self.levels[0].runs[0].unmap();
 
             //buffer already written to levels.front().runs.front(). We can clear it now for inserting new entry.
             self.buffer.empty();
@@ -78,11 +76,11 @@ impl LSMTree {
         //read from buffer first. then from level 0 to max_level. return first match entry.
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
-        let mut counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic<usize> according to c++ codebase.
+        let counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic<usize> according to c++ codebase.
         match self.buffer.get(key) {
             Some(v) => {
                 //found in buffer, return the result;
-                if v != TOMBSTONE {
+                if v != TOMBSTONE.as_bytes().to_vec() {
                     return Some(v);
                 } else {
                     return None;
@@ -92,14 +90,14 @@ impl LSMTree {
                 //not found in buffer, start searching in vector<Level>
 
                 for current_run in 0..10 {
-                    let mut current_val: ValueT;
+                    let current_val: ValueT;
                     //let mut run: run::Run;
                     if latest_run >= 0 || (self.get_run(current_run).is_none()) {
                         // Stop search if we discovered a key in another run, or
                         // if there are no more runs to search
                         //TODO how to terminate this task thread here?
                     } else {
-                        let mut run = self.get_run(current_run).unwrap();
+                        let run = self.get_run(current_run).unwrap();
                         if run.get(key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
@@ -113,12 +111,12 @@ impl LSMTree {
                                 latest_run = current_run as i32;
                                 latest_val = current_val;
                             }
-                            break;//find the newest entry and break the for loop.
+                            break; //find the newest entry and break the for loop.
                         }
                     }
                 }
 
-                if latest_run >= 0 && latest_val != TOMBSTONE {
+                if latest_run >= 0 && latest_val != TOMBSTONE.as_bytes().to_vec() {
                     return Some(latest_val);
                 }
             }
@@ -133,20 +131,19 @@ impl LSMTree {
         // }
 
         //let mut counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic
-        let mut buffer_range: Vec<Entry>;
-        let mut ranges: HashMap<usize, Vec<Entry>> = HashMap::new(); //record candidates in each level.
+        let mut buffer_range: Vec<EntryT>;
+        let mut ranges: HashMap<usize, Vec<EntryT>> = HashMap::new(); //record candidates in each level.
 
         //search in buffer and record result
         ranges.insert(0, self.buffer.range(start, end));
 
         //search in runs
-        for current_run in 0..10
-        {
+        for current_run in 0..10 {
             match self.get_run(current_run) {
                 Some(r) => {
                     //start and end are used multiple times which causes "use of moved value"
                     ranges.insert(current_run + 1, r.range(start, end));
-                },
+                }
                 _ => {}
             }
         }
@@ -158,8 +155,8 @@ impl LSMTree {
     }
 
     pub fn del(&mut self, key: Vec<u8>) {
-        let entry = Entry::new(key, TOMBSTONE.clone());
-        
+        let entry = EntryT::new(key, TOMBSTONE.as_bytes().to_vec());
+
         self.put(entry);
     }
 

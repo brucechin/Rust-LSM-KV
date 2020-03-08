@@ -1,86 +1,89 @@
-use crate::data_type::Entry;
+use crate::data_type::EntryT;
 use priority_queue::PriorityQueue;
-use std::hash::{Hash, Hasher};
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 
-#[derive(PartialEq, PartialOrd, Eq, Debug, Hash)]
+#[derive(PartialEq, PartialOrd, Eq, Debug, Hash, Clone)]
 struct MergeEntry {
     pub precedence: usize,
-    pub entries: Vec<Entry>,
+    pub entries: Vec<EntryT>,
     pub num_entries: usize,
     pub current_index: usize,
 }
 
 impl MergeEntry {
-    pub fn new(ent : Vec<Entry>, num :usize, pre : usize) -> MergeEntry {
+    pub fn new(ent: Vec<EntryT>, num: usize, pre: usize) -> MergeEntry {
         MergeEntry {
             precedence: pre,
-            entries : ent,
+            entries: ent,
             num_entries: num,
             current_index: 0,
         }
     }
 
-    pub fn head(&self) -> Entry {
+    pub fn head(&self) -> EntryT {
         self.entries[self.current_index].clone()
     }
 
     pub fn done(&self) -> bool {
         self.current_index == self.num_entries
     }
-
 }
 
-impl Ord for MergeEntry{
-    fn cmp(&self, other: &MergeEntry) -> Ordering{
-        if(self.head() == other.head()){
+impl Ord for MergeEntry {
+    fn cmp(&self, other: &MergeEntry) -> Ordering {
+        if self.head() == other.head() {
             self.precedence.cmp(&other.precedence)
-        }else{
+        } else {
             self.head().cmp(&other.head())
         }
     }
 }
 
+pub type MergeEntryT = MergeEntry;
 
 struct MergeContext {
-    priority_queue: PriorityQueue<MergeEntry, usize> //TODO this need to be changed.
+    priority_queue: PriorityQueue<MergeEntryT, MergeEntryT>, //TODO this need to be changed.
 }
 
 impl MergeContext {
-    pub fn new() -> MergeContext{
-        MergeContext{
-            priority_queue : PriorityQueue::new(),
+    pub fn new() -> MergeContext {
+        MergeContext {
+            priority_queue: PriorityQueue::new(),
         }
     }
 
-    pub fn add(&mut self, entries: Vec<Entry>, num_entries: usize) {
-        
-        if(num_entries > 0){
-            let mut merge_entry : MergeEntry = MergeEntry::new(entries, num_entries, self.priority_queue.len());
+    pub fn add(&mut self, entries: Vec<EntryT>, num_entries: usize) {
+        if num_entries > 0 {
+            let merge_entry: MergeEntry =
+                MergeEntry::new(entries, num_entries, self.priority_queue.len());
             // merge_entry.entries = entries;
             // merge_entry.num_entries = num_entries;
             // merge_entry.precedence = self.priority_queue.len();
             //TODO set priority for merge entry.
-            self.priority_queue.push(merge_entry, 1);
+            let priority = merge_entry.clone();
+            self.priority_queue.push(merge_entry, priority);
         }
     }
 
-    pub fn next(&mut self) -> Entry {
+    pub fn next(&mut self) -> EntryT {
         //TODO priority_queue return both item and its priority
-        let mut currrent  = self.priority_queue.peek().unwrap().0;
-        let mut next = currrent;
-        let entry : Entry;
+        let mut next = self.priority_queue.pop().unwrap().0;
+        let current = next.clone();
 
-        while(next.head().key == currrent.head().key && !self.priority_queue.is_empty()){
-            self.priority_queue.pop();
+        while !self.priority_queue.is_empty() {
             next.current_index += 1;
-            if(!next.done()){
-                self.priority_queue.push(next, 1);
+            if !next.done() {
+                let priority = next.clone();
+                self.priority_queue.push(next, priority);
             }
-            next = self.priority_queue.peek().unwrap().0;
+            if self.priority_queue.peek().unwrap().0.head().key == current.head().key {
+                next = self.priority_queue.pop().unwrap().0;
+            } else {
+                break;
+            }
         }
-        currrent.head()
-
+        current.head()
     }
 
     pub fn done(&self) -> bool {
@@ -88,9 +91,7 @@ impl MergeContext {
     }
 }
 
-
-
 #[test]
-fn test_merge_entry_cmp(){
+fn test_merge_entry_cmp() {
     println!("hello merge");
 }
