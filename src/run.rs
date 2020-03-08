@@ -150,6 +150,7 @@ impl Run {
     pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
         //bloom_filter
         if self.bloom_filter.check(key) {
+            //it is very likely that this Run contains target entry. False positives may occur.
             if *key < self.fence_pointers[0] || *key > self.max_key {
                 return None;
             }
@@ -287,7 +288,7 @@ impl Run {
         self.bloom_filter.set(&entry.key);
     }
 
-    // fn file_size(&self) -> u64 {
-    //     self.max_size * size_of::<EntryT>() as u64
-    // }
+    fn file_size(&self) -> u64 {
+        self.max_size * size_of::<EntryT>() as u64
+    }
 }
