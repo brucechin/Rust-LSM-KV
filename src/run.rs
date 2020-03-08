@@ -4,6 +4,7 @@ use libc;
 use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
+use std::collections::linked_list::Iter;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
@@ -17,7 +18,7 @@ pub struct Run {
     max_key: KeyT,
     mapping: Option<MemoryMap>,
     mapping_fd: raw::c_int,
-    size: u64,
+    pub size: u64,
     max_size: u64,
     tmp_file: PathBuf,
 }

@@ -1,7 +1,10 @@
 use crate::buffer;
 use crate::data_type::{EntryT, ValueT, TOMBSTONE};
 use crate::level;
+use crate::level::Level;
+use crate::merge;
 use crate::run;
+use bit_vec::Iter;
 use rand::distributions::weighted::WeightedError::TooMany;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -33,8 +36,61 @@ impl LSMTree {
     }
 
     //compact level i data to level i+1
-    pub fn merge_down(&self) {
-        unimplemented!()
+    pub fn merge_down(&mut self, current: usize) {
+        let mut merge_ctx: merge::MergeContextT = merge::MergeContextT::new();
+        let mut entry: EntryT;
+        let mut next: usize;
+        //assert!(current >= self.levels.iter());
+        if self.levels[current].remaining() > 0 {
+            //no need for compaction and merge down
+            return;
+        } else if current == self.levels.len() - 1 {
+            //can not merge down anymore
+            println!("No more space in tree");
+            return;
+        } else {
+            next = current + 1;
+        }
+
+        /*
+         * If the next level does not have space for the current level,
+         * recursively merge the next level downwards to create some
+         */
+        if (self.levels[next].remaining() == 0) {
+            self.merge_down(next);
+            //ensure that after merge down, level next has free space now.
+            assert!(self.levels[next].remaining() > 0)
+        }
+
+        /*
+         * Merge all runs in the current level into the first
+         * run in the next level
+         */
+        for mut run in self.levels[current].runs {
+            //add all entries in current levels for merging
+            merge_ctx.add(run.map_read_default(), run.size as usize);
+        }
+
+        self.levels[next].runs.push_front(run::Run::new(
+            self.levels[next].max_run_size as u64,
+            self.bf_bits_per_entry,
+        ));
+        //start writing back this compacted run in next level to a new file on disk
+        self.levels[next].runs[0].map_write();
+        while !merge_ctx.done() {
+            entry = merge_ctx.next();
+            if (!(next == self.levels.len() - 1 && entry.value == TOMBSTONE.as_bytes().to_vec())) {
+                self.levels[next].runs[0].put(&entry.key, &entry.value);
+            }
+        }
+        self.levels[next].runs[0].unmap();
+        //finish writing back for compacted run
+
+        //unmap the old runs and clear these files
+        for mut run in self.levels[current].runs {
+            run.unmap();
+        }
+        self.levels[current].runs.clear();
     }
 
     pub fn put(&mut self, entry: EntryT) -> bool {
@@ -48,7 +104,8 @@ impl LSMTree {
              * If the buffer is full, flush level 0 if necessary
              * to create space
              */
-            self.merge_down();
+
+            //self.merge_down(&self.levels[0]);
             //self.merge_down();
 
             /*
