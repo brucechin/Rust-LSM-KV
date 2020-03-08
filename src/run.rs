@@ -146,8 +146,9 @@ impl Run {
         if *key < self.fence_pointers[0] || *key > self.max_key {
             return None;
         }
-        let page_index = self.fence_pointers.binary_search(key).unwrap() - 1;
-        assert!(page_index >= 0);
+        let next_page = self.fence_pointers.binary_search(key).unwrap();
+        assert!(next_page >= 1);
+        let page_index = next_page - 1;
 
         self.map_read(page_size::get(), page_index * page_size::get());
 
@@ -274,7 +275,7 @@ impl Run {
         }
     }
 
-    fn file_size(&self) -> u64 {
-        self.max_size * size_of::<EntryT>() as u64
-    }
+    // fn file_size(&self) -> u64 {
+    //     self.max_size * size_of::<EntryT>() as u64
+    // }
 }

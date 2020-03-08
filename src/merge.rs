@@ -56,7 +56,7 @@ impl PartialEq for MergeEntry {
     }
 }
 
-pub type MergeEntryT = MergeEntry;
+type MergeEntryT = MergeEntry;
 
 pub struct MergeContext {
     //priority_queue: PriorityQueue<MergeEntryT, MergeEntryT>,
