@@ -4,6 +4,7 @@ use libc;
 use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
+use std::cmp::max;
 use std::collections::linked_list::Iter;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
@@ -140,20 +141,79 @@ impl Run {
         self.mapping_fd = -1;
     }
 
-    pub fn get(&self, key: &KeyT) -> Option<ValueT> {
+    pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
+        //bloom_filter
         if *key < self.fence_pointers[0] || *key > self.max_key {
             return None;
         }
+        let page_index = self.fence_pointers.binary_search(key).unwrap() - 1;
+        assert!(page_index >= 0);
 
-        None
+        self.map_read(page_size::get(), page_index * page_size::get());
+
+        let mut val: ValueT = vec![];
+        unsafe {
+            for i in 0..page_size::get() / size_of::<EntryT>() {
+                if std::slice::from_raw_parts(
+                    self.mapping
+                        .as_ref()
+                        .unwrap()
+                        .data()
+                        .add(size_of::<EntryT>() * i as usize),
+                    KEY_SIZE,
+                )
+                .to_vec()
+                    == *key
+                {
+                    val = std::slice::from_raw_parts(
+                        self.mapping
+                            .as_ref()
+                            .unwrap()
+                            .data()
+                            .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
+                        VALUE_SIZE,
+                    )
+                    .to_vec()
+                }
+            }
+        }
+
+        self.unmap();
+
+        Some(val)
     }
 
     pub fn range(&self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
         unimplemented!()
     }
 
-    pub fn put(&mut self, key: &KeyT, value: &ValueT) -> bool {
-        unimplemented!()
+    pub fn put(&mut self, entry: &EntryT) {
+        assert!(self.size < self.max_size);
+
+        //bloom_filter
+
+        if self.size % page_size::get() as u64 == 0 {
+            self.fence_pointers.push(entry.key.clone());
+        }
+
+        self.max_key = max(entry.key.clone(), self.max_key.clone());
+
+        let mut entry_data: Vec<u8> = Vec::new();
+        entry_data.extend(entry.key.iter());
+        entry_data.extend(entry.value.iter());
+
+        unsafe {
+            for byte in entry_data {
+                std::ptr::write(
+                    self.mapping
+                        .as_ref()
+                        .unwrap()
+                        .data()
+                        .add(size_of::<EntryT>() * self.size as usize),
+                    byte,
+                );
+            }
+        }
     }
 
     fn file_size(&self) -> u64 {

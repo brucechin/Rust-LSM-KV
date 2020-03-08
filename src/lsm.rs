@@ -118,7 +118,7 @@ impl LSMTree {
             self.levels[0].runs[0].map_write();
 
             for entry_in_buf in self.buffer.entries.iter() {
-                self.levels[0].runs[0].put(&entry_in_buf.key, &entry_in_buf.value);
+                self.levels[0].runs[0].put(&entry_in_buf);
             }
             self.levels[0].runs[0].unmap();
 
@@ -154,7 +154,7 @@ impl LSMTree {
                         // if there are no more runs to search
                         //TODO how to terminate this task thread here?
                     } else {
-                        let run = self.get_run(current_run).unwrap();
+                        let mut run = self.get_run(current_run).unwrap();
                         if run.get(key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
