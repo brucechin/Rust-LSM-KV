@@ -8,7 +8,7 @@ pub type ValueT = Vec<u8>;
 pub static KEY_SIZE: usize = 8;
 pub static FILENAME_SIZE: usize = 32;
 pub static VALUE_SIZE: usize = 32;
-//pub static TOMBSTONE: ValueT = ValueT::from("TOMBSTONE");
+pub static TOMBSTONE: ValueT = vec![0, 0];
 #[derive(Eq, Default, Debug, Clone)]
 pub struct Entry {
     pub key: KeyT,

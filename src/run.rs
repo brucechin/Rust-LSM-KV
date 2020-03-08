@@ -140,8 +140,8 @@ impl Run {
         self.mapping_fd = -1;
     }
 
-    pub fn get(&self, key: KeyT) -> Option<ValueT> {
-        if key < self.fence_pointers[0] || key > self.max_key {
+    pub fn get(&self, key: &KeyT) -> Option<ValueT> {
+        if *key < self.fence_pointers[0] || *key > self.max_key {
             return None;
         }
 
