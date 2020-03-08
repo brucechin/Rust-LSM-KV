@@ -139,12 +139,45 @@ impl Run {
         self.mapping_fd = -1;
     }
 
-    pub fn get(&self, key: &KeyT) -> Option<ValueT> {
+    pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
         if *key < self.fence_pointers[0] || *key > self.max_key {
             return None;
         }
+        let page_index = self.fence_pointers.binary_search(key).unwrap() - 1;
+        assert!(page_index >= 0);
 
-        None
+        self.map_read(page_size::get(), page_index * page_size::get());
+
+        let mut val: ValueT = vec![];
+        unsafe {
+            for i in 0..page_size::get() / size_of::<EntryT>() {
+                if std::slice::from_raw_parts(
+                    self.mapping
+                        .as_ref()
+                        .unwrap()
+                        .data()
+                        .add(size_of::<EntryT>() * i as usize),
+                    KEY_SIZE,
+                )
+                .to_vec()
+                    == *key
+                {
+                    val = std::slice::from_raw_parts(
+                        self.mapping
+                            .as_ref()
+                            .unwrap()
+                            .data()
+                            .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
+                        VALUE_SIZE,
+                    )
+                    .to_vec()
+                }
+            }
+        }
+
+        self.unmap();
+
+        Some(val)
     }
 
     pub fn range(&self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {

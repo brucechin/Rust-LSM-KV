@@ -97,7 +97,7 @@ impl LSMTree {
                         // if there are no more runs to search
                         //TODO how to terminate this task thread here?
                     } else {
-                        let run = self.get_run(current_run).unwrap();
+                        let mut run = self.get_run(current_run).unwrap();
                         if run.get(key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
