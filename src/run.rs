@@ -4,6 +4,7 @@ use libc;
 use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
+use std::cmp::max;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
@@ -140,6 +141,7 @@ impl Run {
     }
 
     pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
+        //bloom_filter
         if *key < self.fence_pointers[0] || *key > self.max_key {
             return None;
         }
@@ -184,8 +186,33 @@ impl Run {
         unimplemented!()
     }
 
-    pub fn put(&mut self, key: &KeyT, value: &ValueT) -> bool {
-        unimplemented!()
+    pub fn put(&mut self, entry: &EntryT) {
+        assert!(self.size < self.max_size);
+
+        //bloom_filter
+
+        if self.size % page_size::get() as u64 == 0 {
+            self.fence_pointers.push(entry.key.clone());
+        }
+
+        self.max_key = max(entry.key.clone(), self.max_key.clone());
+
+        let mut entry_data: Vec<u8> = Vec::new();
+        entry_data.extend(entry.key.iter());
+        entry_data.extend(entry.value.iter());
+
+        unsafe {
+            for byte in entry_data {
+                std::ptr::write(
+                    self.mapping
+                        .as_ref()
+                        .unwrap()
+                        .data()
+                        .add(size_of::<EntryT>() * self.size as usize),
+                    byte,
+                );
+            }
+        }
     }
 
     fn file_size(&self) -> u64 {

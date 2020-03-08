@@ -61,7 +61,7 @@ impl LSMTree {
             self.levels[0].runs[0].map_write();
 
             for entry_in_buf in self.buffer.entries.iter() {
-                self.levels[0].runs[0].put(&entry_in_buf.key, &entry_in_buf.value);
+                self.levels[0].runs[0].put(&entry_in_buf);
             }
             self.levels[0].runs[0].unmap();
 
