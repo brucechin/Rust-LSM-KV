@@ -66,28 +66,27 @@ impl LSMTree {
          * Merge all runs in the current level into the first
          * run in the next level
          */
-        for mut run in self.levels[current].runs {
+        for mut run in self.levels[current].runs.iter_mut() {
             //add all entries in current levels for merging
             merge_ctx.add(run.map_read_default(), run.size as usize);
         }
-
-        self.levels[next].runs.push_front(run::Run::new(
-            self.levels[next].max_run_size as u64,
-            self.bf_bits_per_entry,
-        ));
+        let size = self.levels[next].max_run_size as u64;
+        self.levels[next]
+            .runs
+            .push_front(run::Run::new(size, self.bf_bits_per_entry));
         //start writing back this compacted run in next level to a new file on disk
         self.levels[next].runs[0].map_write();
         while !merge_ctx.done() {
             entry = merge_ctx.next();
             if (!(next == self.levels.len() - 1 && entry.value == TOMBSTONE.as_bytes().to_vec())) {
-                self.levels[next].runs[0].put(&entry.key, &entry.value);
+                self.levels[next].runs[0].put(&entry);
             }
         }
         self.levels[next].runs[0].unmap();
         //finish writing back for compacted run
 
         //unmap the old runs and clear these files
-        for mut run in self.levels[current].runs {
+        for mut run in self.levels[current].runs.iter_mut() {
             run.unmap();
         }
         self.levels[current].runs.clear();
