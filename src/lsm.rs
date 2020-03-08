@@ -140,7 +140,7 @@ impl LSMTree {
         //search in runs
         for current_run in 0..10 {
             match self.get_run(current_run) {
-                Some(r) => {
+                Some(mut r) => {
                     //start and end are used multiple times which causes "use of moved value"
                     ranges.insert(current_run + 1, r.range(start, end));
                 }

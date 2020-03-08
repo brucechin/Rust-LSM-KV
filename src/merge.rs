@@ -77,7 +77,6 @@ impl MergeContext {
             // merge_entry.entries = entries;
             // merge_entry.num_entries = num_entries;
             // merge_entry.precedence = self.priority_queue.len();
-            let priority = merge_entry.clone();
             self.priority_queue.push(merge_entry);
         }
     }
@@ -90,7 +89,6 @@ impl MergeContext {
         while !self.priority_queue.is_empty() {
             next.current_index += 1;
             if !next.done() {
-                let priority = next.clone();
                 self.priority_queue.push(next);
             }
             if self.priority_queue.peek().unwrap().head().key == current.head().key {

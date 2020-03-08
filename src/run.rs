@@ -182,8 +182,66 @@ impl Run {
         Some(val)
     }
 
-    pub fn range(&self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
-        unimplemented!()
+    pub fn range(&mut self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
+        let mut res: Vec<EntryT> = Vec::new();
+
+        let page_start: usize;
+        let page_end: usize;
+
+        if *start > self.max_key || self.fence_pointers[0] > *end {
+            return res;
+        }
+
+        if *start < self.fence_pointers[0] {
+            page_start = 0;
+        } else {
+            page_start = self.fence_pointers.binary_search(start).unwrap() - 1;
+        }
+
+        if *end > self.max_key {
+            page_end = 0;
+        } else {
+            page_end = self.fence_pointers.binary_search(end).unwrap() - 1;
+        }
+
+        assert!(page_start < page_end);
+        let num_pages = page_end - page_start;
+        self.map_read(num_pages * page_size::get(), page_start * page_size::get());
+
+        let num_entries = num_pages * page_size::get() / size_of::<EntryT>();
+        res.reserve(num_entries);
+
+        unsafe {
+            for i in 0..num_entries {
+                let entry = EntryT {
+                    key: std::slice::from_raw_parts(
+                        self.mapping
+                            .as_ref()
+                            .unwrap()
+                            .data()
+                            .add(size_of::<EntryT>() * i as usize),
+                        KEY_SIZE,
+                    )
+                    .to_vec(),
+                    value: std::slice::from_raw_parts(
+                        self.mapping
+                            .as_ref()
+                            .unwrap()
+                            .data()
+                            .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
+                        VALUE_SIZE,
+                    )
+                    .to_vec(),
+                };
+                if *start <= entry.key && entry.key <= *end {
+                    res.push(entry);
+                }
+            }
+        }
+
+        self.unmap();
+
+        res
     }
 
     pub fn put(&mut self, entry: &EntryT) {
