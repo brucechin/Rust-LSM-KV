@@ -13,7 +13,6 @@ use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 
 pub struct LSMTree {
-    //TODO need threadpool, multiple-levels, in-memory buffer
     levels: Vec<level::Level>,
     buffer: buffer::Buffer,
     worker_pool: threadpool::ThreadPool,
@@ -21,7 +20,9 @@ pub struct LSMTree {
 }
 
 impl LSMTree {
-    pub fn new() {}
+    pub fn new() {
+        //TODO implment constructor
+    }
 
     pub fn get_run(&self, run_id: usize) -> Option<run::Run> {
         let mut index = run_id;
@@ -104,8 +105,7 @@ impl LSMTree {
              * to create space
              */
 
-            //self.merge_down(&self.levels[0]);
-            //self.merge_down();
+            self.merge_down(0);
 
             /*
              * Flush the buffer to level 0.
@@ -132,7 +132,8 @@ impl LSMTree {
         //read from buffer first. then from level 0 to max_level. return first match entry.
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
-        let counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic<usize> according to c++ codebase.
+        //multi threading searching on multiple Runs is not available for now
+        //let counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic<usize> according to c++ codebase.
         match self.buffer.get(key) {
             Some(v) => {
                 //found in buffer, return the result;
@@ -151,13 +152,14 @@ impl LSMTree {
                     if latest_run >= 0 || (self.get_run(current_run).is_none()) {
                         // Stop search if we discovered a key in another run, or
                         // if there are no more runs to search
-                        //TODO how to terminate this task thread here?
+                        break;
                     } else {
                         let mut run = self.get_run(current_run).unwrap();
                         if run.get(key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
-                            //search(); //TODO how to call this task again??? in c++ codebase, the search is task abstraction for threadpool to execute
+                            //search();
+                            // TODO how to call this task again??? in c++ codebase, the search is task abstraction for threadpool to execute
                         } else {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need
@@ -181,19 +183,18 @@ impl LSMTree {
     }
 
     pub fn range(&self, start: &Vec<u8>, end: &Vec<u8>) -> Option<Vec<ValueT>> {
-        //TODO deal with invalid input case
-        // if end <= start {
-        //     None
-        // }
-
-        //let mut counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic
-        let mut buffer_range: Vec<EntryT>;
+        if end <= start {
+            //invalid input
+            return None;
+        }
+        let mut buffer_range: Vec<ValueT> = Vec::new(); //this is return value list
         let mut ranges: HashMap<usize, Vec<EntryT>> = HashMap::new(); //record candidates in each level.
-
+        let mut merge_ctx = merge::MergeContextT::new();
+        let mut entry: EntryT;
         //search in buffer and record result
         ranges.insert(0, self.buffer.range(start, end));
 
-        //search in runs
+        //search in runs. TODO search range should be num of Runs
         for current_run in 0..10 {
             match self.get_run(current_run) {
                 Some(mut r) => {
@@ -207,7 +208,19 @@ impl LSMTree {
         //TODO Merge ranges and return values. because there could be old values in ranges to be eliminated.
         // Only the latest values should be kept
 
-        None
+        for kv in ranges.iter() {
+            //TODO is to_vec() a good option????
+            merge_ctx.add(kv.1.to_vec(), kv.1.len());
+        }
+
+        while !merge_ctx.done() {
+            entry = merge_ctx.next();
+            if entry.value != TOMBSTONE.as_bytes().to_vec() {
+                buffer_range.push(entry.value);
+            }
+        }
+
+        Some(buffer_range)
     }
 
     pub fn del(&mut self, key: Vec<u8>) {
@@ -216,8 +229,14 @@ impl LSMTree {
         self.put(entry);
     }
 
-    //load lsm tree from disk file
+    //TODO load lsm tree from disk file
+
     //    pub fn load(&mut self, filename : &str){
     //
     //    }
+}
+
+#[test]
+fn test_lsm() {
+    println!("hello lsm test");
 }
