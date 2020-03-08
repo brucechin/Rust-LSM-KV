@@ -1,9 +1,10 @@
 use crate::data_type::EntryT;
-use priority_queue::PriorityQueue;
+use rand::distributions::Open01;
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::hash::{Hash, Hasher};
 
-#[derive(PartialEq, PartialOrd, Eq, Debug, Hash, Clone)]
+#[derive(PartialOrd, Eq, Debug, Hash, Clone)]
 struct MergeEntry {
     pub precedence: usize,
     pub entries: Vec<EntryT>,
@@ -31,7 +32,7 @@ impl MergeEntry {
 }
 
 impl Ord for MergeEntry {
-    fn cmp(&self, other: &MergeEntry) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         if self.head() == other.head() {
             self.precedence.cmp(&other.precedence)
         } else {
@@ -40,16 +41,32 @@ impl Ord for MergeEntry {
     }
 }
 
+impl PartialOrd for MergeEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for MergeEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.precedence == other.precedence
+            && self.entries == other.entries
+            && self.current_index == other.current_index
+            && self.num_entries == other.num_entries
+    }
+}
+
 pub type MergeEntryT = MergeEntry;
 
 struct MergeContext {
-    priority_queue: PriorityQueue<MergeEntryT, MergeEntryT>, //TODO this need to be changed.
+    //priority_queue: PriorityQueue<MergeEntryT, MergeEntryT>,
+    priority_queue: BinaryHeap<MergeEntryT>,
 }
 
 impl MergeContext {
     pub fn new() -> MergeContext {
         MergeContext {
-            priority_queue: PriorityQueue::new(),
+            priority_queue: BinaryHeap::new(),
         }
     }
 
@@ -60,25 +77,24 @@ impl MergeContext {
             // merge_entry.entries = entries;
             // merge_entry.num_entries = num_entries;
             // merge_entry.precedence = self.priority_queue.len();
-            //TODO set priority for merge entry.
             let priority = merge_entry.clone();
-            self.priority_queue.push(merge_entry, priority);
+            self.priority_queue.push(merge_entry);
         }
     }
 
     pub fn next(&mut self) -> EntryT {
         //TODO priority_queue return both item and its priority
-        let mut next = self.priority_queue.pop().unwrap().0;
+        let mut next = self.priority_queue.pop().unwrap();
         let current = next.clone();
 
         while !self.priority_queue.is_empty() {
             next.current_index += 1;
             if !next.done() {
                 let priority = next.clone();
-                self.priority_queue.push(next, priority);
+                self.priority_queue.push(next);
             }
-            if self.priority_queue.peek().unwrap().0.head().key == current.head().key {
-                next = self.priority_queue.pop().unwrap().0;
+            if self.priority_queue.peek().unwrap().head().key == current.head().key {
+                next = self.priority_queue.pop().unwrap();
             } else {
                 break;
             }
