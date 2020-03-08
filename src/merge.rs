@@ -58,7 +58,7 @@ impl PartialEq for MergeEntry {
 
 pub type MergeEntryT = MergeEntry;
 
-struct MergeContext {
+pub struct MergeContext {
     //priority_queue: PriorityQueue<MergeEntryT, MergeEntryT>,
     priority_queue: BinaryHeap<MergeEntryT>,
 }
@@ -104,6 +104,8 @@ impl MergeContext {
         self.priority_queue.is_empty()
     }
 }
+
+pub type MergeContextT = MergeContext;
 
 #[test]
 fn test_merge_entry_cmp() {
