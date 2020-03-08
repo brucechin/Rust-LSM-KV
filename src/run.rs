@@ -1,5 +1,6 @@
 use crate::bloom_filter;
 use crate::data_type::{EntryT, KeyT, ValueT, KEY_SIZE, VALUE_SIZE};
+use libc;
 use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
@@ -7,6 +8,7 @@ use std::borrow::Borrow;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
+use std::os::raw::c_void;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 
@@ -35,11 +37,11 @@ impl Run {
         }
     }
 
-    pub fn map_read_default(&mut self) -> EntryT {
+    pub fn map_read_default(&mut self) -> Vec<EntryT> {
         self.map_read(size_of::<EntryT>() * self.max_size as usize, 0)
     }
 
-    pub fn map_read(&mut self, len: usize, offset: usize) -> EntryT {
+    pub fn map_read(&mut self, len: usize, offset: usize) -> Vec<EntryT> {
         assert!(self.mapping.is_none());
 
         match File::open(self.tmp_file.as_path()) {
@@ -60,24 +62,36 @@ impl Run {
             Ok(map) => unsafe {
                 assert_eq!(map.len(), KEY_SIZE + VALUE_SIZE);
                 self.mapping = Some(map);
-                EntryT {
-                    key: std::slice::from_raw_parts(
-                        self.mapping.as_ref().unwrap().data(),
-                        KEY_SIZE,
-                    )
-                    .to_vec(),
-                    value: std::slice::from_raw_parts(
-                        self.mapping.as_ref().unwrap().data().add(KEY_SIZE),
-                        VALUE_SIZE,
-                    )
-                    .to_vec(),
+                let mut res: Vec<EntryT> = Vec::new();
+                for i in 0..self.size {
+                    res.push(EntryT {
+                        key: std::slice::from_raw_parts(
+                            self.mapping
+                                .as_ref()
+                                .unwrap()
+                                .data()
+                                .add(size_of::<EntryT>() * i as usize),
+                            KEY_SIZE,
+                        )
+                        .to_vec(),
+                        value: std::slice::from_raw_parts(
+                            self.mapping
+                                .as_ref()
+                                .unwrap()
+                                .data()
+                                .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
+                            VALUE_SIZE,
+                        )
+                        .to_vec(),
+                    })
                 }
+                res
             },
             Err(_) => panic!("Mapping failed!"),
         }
     }
 
-    pub fn map_write(&mut self) -> EntryT {
+    pub fn map_write(&mut self) {
         assert!(self.mapping.is_none());
 
         let len = size_of::<EntryT>() * self.max_size as usize;
@@ -94,17 +108,47 @@ impl Run {
             }
             Err(_) => panic!("Open temp file failed!"),
         };
+        unsafe {
+            assert!(libc::lseek(self.mapping_fd, len as i64, 0) != -1);
+            assert!(libc::write(self.mapping_fd, "".as_ptr() as *const c_void, 1) != -1);
+        }
+
+        match MemoryMap::new(
+            len,
+            &[
+                MapOption::MapWritable,
+                MapOption::MapFd(self.mapping_fd),
+                MapOption::MapOffset(0),
+                MapOption::MapNonStandardFlags(0x01),
+            ],
+        ) {
+            Ok(map) => unsafe {
+                assert_eq!(map.len(), KEY_SIZE + VALUE_SIZE);
+                self.mapping = Some(map);
+            },
+            Err(_) => panic!("Mapping failed!"),
+        }
     }
 
-    pub fn unmap(&self) {
-        unimplemented!()
+    pub fn unmap(&mut self) {
+        assert!(self.mapping.is_some());
+
+        self.mapping = None;
+        unsafe {
+            libc::close(self.mapping_fd);
+        }
+        self.mapping_fd = -1;
     }
 
     pub fn get(&self, key: KeyT) -> Option<ValueT> {
-        unimplemented!()
+        if key < self.fence_pointers[0] || key > self.max_key {
+            return None;
+        }
+
+        None
     }
 
-    pub fn range(&self, start: KeyT, end: KeyT) -> Vec<EntryT> {
+    pub fn range(&self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
         unimplemented!()
     }
 

@@ -50,13 +50,13 @@ impl BloomFilter {
         self.table.set(i as usize, true);
     }
 
-    pub fn get_bit(&mut self, i: IndexT) -> Option<bool> {
+    pub fn get_bit(&self, i: IndexT) -> Option<bool> {
         assert!(i < self.size);
 
         self.table.get(i as usize)
     }
 
-    pub fn hash1(&mut self, k: IndexT) -> IndexT {
+    pub fn hash1(&self, k: IndexT) -> IndexT {
         let mut key = k;
         key = (!key).wrapping_add(key << 21); // key = (key << 21) - key - 1;
         key = key ^ (key >> 24);
@@ -68,7 +68,7 @@ impl BloomFilter {
         key
     }
 
-    pub fn hash2(&mut self, k: IndexT) -> IndexT {
+    pub fn hash2(&self, k: IndexT) -> IndexT {
         let mut key = k;
         key = (key + 0x7ed55d16) + (key << 12);
         key = (key ^ 0xc761c23c) ^ (key >> 19);
@@ -79,7 +79,7 @@ impl BloomFilter {
         key
     }
 
-    pub fn hash3(&mut self, k: IndexT) -> IndexT {
+    pub fn hash3(&self, k: IndexT) -> IndexT {
         let mut key = k;
         key = (key ^ 61) ^ (key >> 16);
         key = key + (key << 3);
@@ -89,7 +89,7 @@ impl BloomFilter {
         key
     }
 
-    pub fn bloom_check(&mut self, k: IndexT) -> bool {
+    pub fn bloom_check(&self, k: IndexT) -> bool {
         for i in 0..self.hashes {
             let hash = (self.hash1(k).wrapping_add(i.wrapping_mul(self.hash3(k)))) % self.size;
             if self.get_bit(hash) == Some(false) {
