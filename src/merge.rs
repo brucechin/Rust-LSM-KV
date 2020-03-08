@@ -2,32 +2,32 @@ use crate::data_type::Entry;
 use priority_queue::PriorityQueue;
 
 struct MergeEntry {
-    precedence: int,
+    precedence: i32,
     entries: Vec<Entry>,
-    num_entries: long,
-    current_index: int,
+    num_entries: i32,
+    current_index: i32,
 }
 
 impl MergeEntry {
-    pub fn new() {}
+    pub fn new() {unimplemented!()}
 
-    pub fn head() -> Entry {}
+    pub fn head() -> Entry {unimplemented!()}
 
-    pub fn done() -> bool {}
+    pub fn done() -> bool {unimplemented!()}
 
     //TODO overload comparator for MergeEntry for sorting
 }
 
 struct MergeContext {
-    priority_queue: PriorityQueue,
+    priority_queue: PriorityQueue<i32,i32>,//TODO this need to be changed.
 }
 
 impl MergeContext {
-    pub fn new() {}
+    pub fn new() {unimplemented!()}
 
-    pub fn add(entry: Entry, num_entries: long) {}
+    pub fn add(entry: Entry, num_entries: i32) {unimplemented!()}
 
-    pub fn next() -> Entry {}
+    pub fn next() -> Entry {unimplemented!()}
 
-    pub fn done() -> bool {}
+    pub fn done() -> bool {unimplemented!()}
 }

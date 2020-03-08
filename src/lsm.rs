@@ -7,6 +7,7 @@ use spinlock::Spinlock;
 use std::collections::HashMap;
 use std::ptr::null;
 use threadpool::ThreadPool;
+use std::sync::{Arc, Mutex};
 
 pub struct LSMTree {
     //TODO need threadpool, multiple-levels, in-memory buffer
@@ -31,20 +32,21 @@ impl LSMTree {
     }
 
     //compact level i data to level i+1
-    pub fn merge_down() {}
+    pub fn merge_down() {unimplemented!()}
 
     pub fn put(&mut self, entry: Entry) -> bool {
         //TODO entry must be fixed size for easier put implementation.
         if self.buffer.full() == false {
             //put to buffer success
             self.buffer.put(entry.key, entry.value);
-            true
+            return true;
         } else {
             /*
              * If the buffer is full, flush level 0 if necessary
              * to create space
              */
-            self.merge_down();
+            LSMTree::merge_down();
+            //self.merge_down();
 
             /*
              * Flush the buffer to level 0.
@@ -66,22 +68,23 @@ impl LSMTree {
 
             //buffer already written to levels.front().runs.front(). We can clear it now for inserting new entry.
             self.buffer.empty();
-            self.buffer.put(entry.key, entry.value)
+            self.buffer.put(entry.key, entry.value);
+            true
         }
     }
 
     pub fn get(&self, key: Vec<u8>) -> Option<ValueT> {
         //read from buffer first. then from level 0 to max_level. return first match entry.
-        let mut latest_val: ValueT = "NULL".collect();
-        let mut latest_run: usize;
+        let mut latest_val: ValueT = ValueT::new();
+        let mut latest_run: i32;
         let mut counter: usize; //TODO counter should be atomic<usize> according to c++ codebase.
         match self.buffer.get(key) {
             Some(v) => {
                 //found in buffer, return the result;
                 if v != TOMBSTONE {
-                    v
+                    return Some(v);
                 } else {
-                    None
+                    return None;
                 }
             }
             _ => {
@@ -111,54 +114,55 @@ impl LSMTree {
                             // to search later runs.
                             current_val = run.get(key).unwrap();
                             lock.lock();
-                            if latest_run < 0 || current_run < latest_run {
-                                latest_run = current_run;
-                                lastest_val = current_val;
+                            if latest_run < 0 || current_run < latest_run as usize {
+                                latest_run = current_run as i32;
+                                latest_val = current_val;
                             }
-                            lock.unlock();
+                            //lock.unlock();
                         }
                     }
                 });
                 self.workerpool.join();
 
                 if latest_run >= 0 && latest_val != TOMBSTONE {
-                    latest_val
+                    return Some(latest_val);
                 }
-                None
             }
         }
         None
     }
 
     pub fn range(&self, start: &Vec<u8>, end: &Vec<u8>) -> Option<Vec<ValueT>> {
-        if end <= start {
-            None
-        }
+        //TODO deal with invalid input case
+        // if end <= start {
+        //     None
+        // }
 
         let lock = spinlock::Spinlock::new(0);
         let mut counter: usize; //TODO counter should be atomic
         let mut buffer_range: Vec<Entry>;
-        let mut ranges: HashMap<int, Vec<Entry>>; //record candidates in each level.
+        let mut ranges: HashMap<usize, Vec<Entry>>; //record candidates in each level.
 
         //search in buffer and record result
-        ranges.insert(0, buffer.range(start, end));
+        ranges.insert(0, self.buffer.range(start, end));
 
         //search in runs
         counter = 0;
         self.workerpool.execute(|| {
             let mut current_run: usize = counter;
+
             counter += 1;
             match self.get_run(current_run) {
                 Some(r) => {
                     lock.lock();
                     //start and end are used multiple times which causes "use of moved value"
                     ranges.insert(current_run + 1, r.range(start, end));
-                    lock.unlock();
+                    //lock.unlock();
 
                     //TODO call this task again.
-                    search();
-                }
-                _ => None,
+                    //search();
+                },
+                _ => {return ;}
             }
         });
         self.workerpool.join();
@@ -171,6 +175,7 @@ impl LSMTree {
 
     pub fn del(&mut self, key: Vec<u8>) {
         let entry = Entry::new(key, TOMBSTONE.clone());
+        
         self.put(entry);
     }
 

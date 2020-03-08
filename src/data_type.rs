@@ -8,11 +8,20 @@ pub type ValueT = Vec<u8>;
 pub static KEY_SIZE: usize = 8;
 pub static FILENAME_SIZE: usize = 32;
 pub static VALUE_SIZE: usize = 32;
-
+pub static TOMBSTONE: ValueT = ValueT::from("TOMBSTONE");
 #[derive(Eq, Default, Debug, Clone)]
 pub struct Entry {
     pub key: KeyT,
     pub value: ValueT,
+}
+
+impl Entry {
+    pub fn new(k: KeyT, val: ValueT) -> Entry {
+        Entry{
+            key : k,
+            value : val,
+        }
+    }
 }
 
 impl Ord for Entry {
