@@ -15,9 +15,9 @@ impl Buffer {
         }
     }
 
-    pub fn get(&self, key: KeyT) -> Option<ValueT> {
+    pub fn get(&self, key: &KeyT) -> Option<ValueT> {
         let search_entry = EntryT {
-            key: key,
+            key: *key,
             value: ValueT::default(),
         };
         if let Some(entry) = self.entries.get(&search_entry) {
