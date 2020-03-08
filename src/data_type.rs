@@ -1,4 +1,6 @@
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
+
 /*
  *  use for components
  */
@@ -9,7 +11,7 @@ pub static KEY_SIZE: usize = 8;
 pub static FILENAME_SIZE: usize = 32;
 pub static VALUE_SIZE: usize = 32;
 pub static TOMBSTONE: &str = "TOMBSTONE";
-#[derive(Eq, Default, Debug, Clone)]
+#[derive(Eq, Default, Debug, Clone, Hash)]
 pub struct Entry {
     pub key: KeyT,
     pub value: ValueT,
