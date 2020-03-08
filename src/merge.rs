@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::hash::{Hash, Hasher};
 
-#[derive(PartialOrd, Eq, Debug, Hash, Clone)]
+#[derive(Eq, Debug, Hash, Clone)]
 struct MergeEntry {
     pub precedence: usize,
     pub entries: Vec<EntryT>,
