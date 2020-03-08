@@ -122,10 +122,10 @@ impl Run {
                 MapOption::MapNonStandardFlags(0x01),
             ],
         ) {
-            Ok(map) => unsafe {
+            Ok(map) => {
                 assert_eq!(map.len(), KEY_SIZE + VALUE_SIZE);
                 self.mapping = Some(map);
-            },
+            }
             Err(_) => panic!("Mapping failed!"),
         }
     }
