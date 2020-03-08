@@ -6,6 +6,7 @@ use mmap::{MapOption, MemoryMap};
 use page_size;
 use std::cmp::max;
 //use std::collections::linked_list::Iter;
+use bloomfilter::Bloom;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
@@ -14,7 +15,8 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 
 pub struct Run {
-    bloom_filer: bloom_filter::BloomFilter,
+    bloom_filter: bloomfilter::Bloom<KeyT>,
+    //bloom_filer: bloom_filter::BloomFilter,
     fence_pointers: Vec<KeyT>,
     max_key: KeyT,
     mapping: Option<MemoryMap>,
@@ -27,7 +29,11 @@ pub struct Run {
 impl Run {
     pub fn new(max_size: u64, bf_bits_per_entry: u64) -> Run {
         Run {
-            bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
+            bloom_filter: bloomfilter::Bloom::new(
+                (max_size * bf_bits_per_entry) as usize,
+                max_size as usize,
+            ),
+            //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
             fence_pointers: Vec::with_capacity((max_size / page_size::get() as u64) as usize),
             max_key: KeyT::default(),
             mapping: None,
@@ -143,45 +149,51 @@ impl Run {
 
     pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
         //bloom_filter
-        if *key < self.fence_pointers[0] || *key > self.max_key {
-            return None;
-        }
-        let next_page = self.fence_pointers.binary_search(key).unwrap();
-        assert!(next_page >= 1);
-        let page_index = next_page - 1;
+        if self.bloom_filter.check(key) {
+            if *key < self.fence_pointers[0] || *key > self.max_key {
+                return None;
+            }
+            let next_page = self.fence_pointers.binary_search(key).unwrap();
+            assert!(next_page >= 1);
+            let page_index = next_page - 1;
 
-        self.map_read(page_size::get(), page_index * page_size::get());
+            self.map_read(page_size::get(), page_index * page_size::get());
 
-        let mut val: ValueT = vec![];
-        unsafe {
-            for i in 0..page_size::get() / size_of::<EntryT>() {
-                if std::slice::from_raw_parts(
-                    self.mapping
-                        .as_ref()
-                        .unwrap()
-                        .data()
-                        .add(size_of::<EntryT>() * i as usize),
-                    KEY_SIZE,
-                )
-                .to_vec()
-                    == *key
-                {
-                    val = std::slice::from_raw_parts(
+            let mut val: ValueT = vec![];
+            unsafe {
+                for i in 0..page_size::get() / size_of::<EntryT>() {
+                    if std::slice::from_raw_parts(
                         self.mapping
                             .as_ref()
                             .unwrap()
                             .data()
-                            .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
-                        VALUE_SIZE,
+                            .add(size_of::<EntryT>() * i as usize),
+                        KEY_SIZE,
                     )
                     .to_vec()
+                        == *key
+                    {
+                        val = std::slice::from_raw_parts(
+                            self.mapping
+                                .as_ref()
+                                .unwrap()
+                                .data()
+                                .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
+                            VALUE_SIZE,
+                        )
+                        .to_vec()
+                    }
                 }
             }
+
+            self.unmap();
+
+            Some(val)
+        } else {
+            //not in this run according to bloom filter
+            println!("not in this Run according to bloom filter");
+            None
         }
-
-        self.unmap();
-
-        Some(val)
     }
 
     pub fn range(&mut self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
@@ -249,8 +261,6 @@ impl Run {
     pub fn put(&mut self, entry: &EntryT) {
         assert!(self.size < self.max_size);
 
-        //bloom_filter
-
         if self.size % page_size::get() as u64 == 0 {
             self.fence_pointers.push(entry.key.clone());
         }
@@ -273,6 +283,8 @@ impl Run {
                 );
             }
         }
+        //set true for this key in this Run. For later more efficient search and avoid unnecessary file I/O operations.
+        self.bloom_filter.set(&entry.key);
     }
 
     // fn file_size(&self) -> u64 {

@@ -2,11 +2,21 @@
 use crate::data_type;
 use bit_vec::BitVec;
 //use rand::prelude::*;
-//use rand::thread_rng;
-//use rand::Rng;
+use rand::thread_rng;
+use rand::Rng;
 //use std::ptr::hash;
+use bloomfilter::Bloom;
 
 pub type IndexT = u64;
+
+#[test]
+fn test_Bloom() {
+    let mut bloom = Bloom::new(100000, 1000);
+    bloom.set("hello");
+    bloom.set("world");
+    assert!(bloom.check("hello"), true);
+    println!("{}", bloom.check("helloo"));
+}
 
 #[derive(Debug)]
 pub struct BloomFilter {
