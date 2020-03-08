@@ -1,7 +1,6 @@
 use crate::buffer;
 use crate::data_type::{EntryT, ValueT, TOMBSTONE};
 use crate::level;
-use crate::level::Level;
 use crate::merge;
 use crate::run;
 use bit_vec::Iter;
@@ -78,7 +77,7 @@ impl LSMTree {
         self.levels[next].runs[0].map_write();
         while !merge_ctx.done() {
             entry = merge_ctx.next();
-            if (!(next == self.levels.len() - 1 && entry.value == TOMBSTONE.as_bytes().to_vec())) {
+            if !(next == self.levels.len() - 1 && entry.value == TOMBSTONE.as_bytes().to_vec()) {
                 self.levels[next].runs[0].put(&entry);
             }
         }
