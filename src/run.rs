@@ -5,7 +5,7 @@ use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
 use std::cmp::max;
-use std::collections::linked_list::Iter;
+//use std::collections::linked_list::Iter;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;

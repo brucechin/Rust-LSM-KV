@@ -1,8 +1,8 @@
 use crate::data_type::EntryT;
-use rand::distributions::Open01;
+//use rand::distributions::Open01;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::hash::{Hash, Hasher};
+//use std::hash::{Hash, Hasher};
 
 #[derive(Eq, Debug, Hash, Clone)]
 struct MergeEntry {

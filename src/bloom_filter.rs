@@ -2,8 +2,8 @@
 use crate::data_type;
 use bit_vec::BitVec;
 //use rand::prelude::*;
-use rand::thread_rng;
-use rand::Rng;
+//use rand::thread_rng;
+//use rand::Rng;
 //use std::ptr::hash;
 
 pub type IndexT = u64;

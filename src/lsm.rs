@@ -3,12 +3,12 @@ use crate::data_type::{EntryT, ValueT, TOMBSTONE};
 use crate::level;
 use crate::merge;
 use crate::run;
-use bit_vec::Iter;
-use rand::distributions::weighted::WeightedError::TooMany;
-use std::borrow::Borrow;
+//use bit_vec::Iter;
+//use rand::distributions::weighted::WeightedError::TooMany;
+//use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::ptr::null;
-use std::sync::{Arc, Mutex};
+//use std::ptr::null;
+//use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 
 pub struct LSMTree {
@@ -39,7 +39,7 @@ impl LSMTree {
     pub fn merge_down(&mut self, current: usize) {
         let mut merge_ctx: merge::MergeContextT = merge::MergeContextT::new();
         let mut entry: EntryT;
-        let mut next: usize;
+        let next: usize;
         //assert!(current >= self.levels.iter());
         if self.levels[current].remaining() > 0 {
             //no need for compaction and merge down
@@ -56,7 +56,7 @@ impl LSMTree {
          * If the next level does not have space for the current level,
          * recursively merge the next level downwards to create some
          */
-        if (self.levels[next].remaining() == 0) {
+        if self.levels[next].remaining() == 0 {
             self.merge_down(next);
             //ensure that after merge down, level next has free space now.
             assert!(self.levels[next].remaining() > 0)
@@ -66,7 +66,7 @@ impl LSMTree {
          * Merge all runs in the current level into the first
          * run in the next level
          */
-        for mut run in self.levels[current].runs.iter_mut() {
+        for run in self.levels[current].runs.iter_mut() {
             //add all entries in current levels for merging
             merge_ctx.add(run.map_read_default(), run.size as usize);
         }
@@ -86,7 +86,7 @@ impl LSMTree {
         //finish writing back for compacted run
 
         //unmap the old runs and clear these files
-        for mut run in self.levels[current].runs.iter_mut() {
+        for run in self.levels[current].runs.iter_mut() {
             run.unmap();
         }
         self.levels[current].runs.clear();
