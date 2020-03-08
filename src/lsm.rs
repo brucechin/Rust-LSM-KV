@@ -20,7 +20,7 @@ pub struct LSMTree {
 impl LSMTree {
     pub fn new() {}
 
-    pub fn get_run(self, run_id: usize) -> Option<run::Run> {
+    pub fn get_run(&self, run_id: usize) -> Option<run::Run> {
         let mut index = run_id;
         for level in self.levels.iter() {
             if run_id < level.runs.len() {
@@ -33,7 +33,7 @@ impl LSMTree {
     }
 
     //compact level i data to level i+1
-    pub fn merge_down() {unimplemented!()}
+    pub fn merge_down(&self) {unimplemented!()}
 
     pub fn put(&mut self, entry: Entry) -> bool {
         //TODO entry must be fixed size for easier put implementation.
@@ -46,7 +46,7 @@ impl LSMTree {
              * If the buffer is full, flush level 0 if necessary
              * to create space
              */
-            LSMTree::merge_down();
+            self.merge_down();
             //self.merge_down();
 
             /*
@@ -113,6 +113,7 @@ impl LSMTree {
                                 latest_run = current_run as i32;
                                 latest_val = current_val;
                             }
+                            break;//find the newest entry and break the for loop.
                         }
                     }
                 }
