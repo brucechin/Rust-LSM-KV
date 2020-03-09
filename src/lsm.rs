@@ -122,7 +122,7 @@ impl LSMTree {
 
     fn fill_str_with_witespace(&self, input: &str, length: usize) -> Vec<u8> {
         let mut res = vec![' ' as u8; length - input.len()];
-        let mut res2: Vec<u8> = input.as_bytes().to_vec();
+        let res2: Vec<u8> = input.as_bytes().to_vec();
         res.extend(res2);
         assert_eq!(res.len(), length);
         res
@@ -134,8 +134,8 @@ impl LSMTree {
     }
 
     pub fn put(&mut self, key_str: &str, value_str: &str) -> bool {
-        let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
-        let mut value = self.fill_str_with_witespace(value_str, data_type::VALUE_SIZE);
+        let key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
+        let value = self.fill_str_with_witespace(value_str, data_type::VALUE_SIZE);
         if self.buffer.full() == false {
             //put to buffer success
             self.buffer.put(key, value);
@@ -170,8 +170,8 @@ impl LSMTree {
     }
 
     pub fn get(&self, key_str: &str) -> Option<String> {
-        let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
-        let mut res: String;
+        let key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
+        let res: String;
         //read from buffer first. then from level 0 to max_level. return first match entry.
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
@@ -226,8 +226,8 @@ impl LSMTree {
     }
 
     pub fn range(&self, start_str: &str, end_str: &str) -> Vec<String> {
-        let mut start = self.fill_str_with_witespace(start_str, data_type::KEY_SIZE);
-        let mut end = self.fill_str_with_witespace(end_str, data_type::KEY_SIZE);
+        let start = self.fill_str_with_witespace(start_str, data_type::KEY_SIZE);
+        let end = self.fill_str_with_witespace(end_str, data_type::KEY_SIZE);
         let mut buffer_range: Vec<String> = Vec::new(); //this is return value list
         if end < start {
             //invalid input

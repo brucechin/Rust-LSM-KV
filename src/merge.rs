@@ -83,18 +83,16 @@ impl MergeContext {
 
     pub fn next(&mut self) -> EntryT {
         //TODO priority_queue return both item and its priority
-        let mut next = self.priority_queue.pop().unwrap();
-        let current = next.clone();
+        let mut next: MergeEntryT;
+        let current = self.priority_queue.peek().unwrap().clone();
 
-        while !self.priority_queue.is_empty() {
+        while !self.priority_queue.is_empty()
+            && self.priority_queue.peek().unwrap().head().key == current.head().key
+        {
+            next = self.priority_queue.pop().unwrap();
             next.current_index += 1;
             if !next.done() {
                 self.priority_queue.push(next);
-            }
-            if self.priority_queue.peek().unwrap().head().key == current.head().key {
-                next = self.priority_queue.pop().unwrap();
-            } else {
-                break;
             }
         }
         current.head()

@@ -2,7 +2,7 @@ use getopts::Options;
 use lsm_kv::data_type::EntryT;
 use lsm_kv::lsm;
 use lsm_kv::lsm::LSMTree;
-use std::io::{BufRead, Write};
+use std::io::BufRead;
 use std::mem::size_of;
 use std::{env, io};
 
@@ -22,21 +22,21 @@ fn command_loop(lsm_tree: &mut LSMTree, input: impl BufRead) {
                         "g" => {
                             let val = lsm_tree.get(tokens[1]);
                             if val.is_some() {
-                                println!("The value of key: {} is {}", tokens[1], val.unwrap());
+                                println!("The value of key {} is {}", tokens[1], val.unwrap());
                             } else {
-                                println!("No value with key: {} in the DB!", tokens[1]);
+                                println!("No value with key {} in the DB!", tokens[1]);
                             }
                         }
                         "r" => {
                             let vals = lsm_tree.range(tokens[1], tokens[2]);
                             if vals.is_empty() {
                                 println!(
-                                    "No value with key between start: {} and end: {} in the DB!",
+                                    "No value with key between {} and {} in the DB!",
                                     tokens[1], tokens[2]
                                 );
                             } else {
                                 println!(
-                                    "Values with keys between start: {} and end: {} are:",
+                                    "Values with keys between {} and {} are:",
                                     tokens[1], tokens[2]
                                 );
                                 for val in vals {
@@ -63,7 +63,6 @@ fn command_loop(lsm_tree: &mut LSMTree, input: impl BufRead) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
 
     let mut buffer_num_pages = lsm::DEFAULT_BUFFER_NUM_PAGES;
     let mut depth = lsm::DEFAULT_TREE_DEPTH;
