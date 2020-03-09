@@ -17,7 +17,7 @@ fn command_loop(lsm_tree: &mut LSMTree, input: impl BufRead) {
                     match tokens[0] {
                         "p" => {
                             lsm_tree.put(tokens[1], tokens[2]);
-                            println!("Inserted!");
+                            println!("The k-v ({}, {}) has been inserted!", tokens[1], tokens[2]);
                         }
                         "g" => {
                             let val = lsm_tree.get(tokens[1]);
@@ -47,7 +47,7 @@ fn command_loop(lsm_tree: &mut LSMTree, input: impl BufRead) {
                         }
                         "d" => {
                             lsm_tree.del(tokens[1]);
-                            println!("Deleted!")
+                            println!("The k-v with key {} has been deleted!", tokens[1]);
                         }
                         "l" => {}
                         _ => {

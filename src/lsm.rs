@@ -240,9 +240,11 @@ impl LSMTree {
                     }
                 }
 
-                if latest_run >= 0 && latest_val != TOMBSTONE.as_bytes().to_vec() {
+                if latest_run >= 0 {
                     res = self.vec_u8_to_str(&latest_val);
-                    return Some(res);
+                    if res != TOMBSTONE.to_string() {
+                        return Some(res);
+                    }
                 }
             }
         }
@@ -283,8 +285,9 @@ impl LSMTree {
         }
         while !merge_ctx.done() {
             entry = merge_ctx.next();
-            if entry.value != TOMBSTONE.as_bytes().to_vec() {
-                buffer_range.push(self.vec_u8_to_str(&entry.value));
+            let res = self.vec_u8_to_str(&entry.value);
+            if res != TOMBSTONE.to_string() {
+                buffer_range.push(res);
             }
         }
 
