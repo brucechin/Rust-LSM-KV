@@ -11,7 +11,6 @@ use std::collections::HashMap;
 //use std::sync::{Arc, Mutex};
 use crate::data_type;
 use std::str;
-use threadpool::ThreadPool;
 pub static DEFAULT_TREE_DEPTH: u64 = 5;
 pub static DEFAULT_TREE_FANOUT: u64 = 10;
 pub static DEFAULT_BUFFER_NUM_PAGES: u64 = 1000;
@@ -122,10 +121,10 @@ impl LSMTree {
     }
 
     fn fill_str_with_witespace(&self, input: &str, length: usize) -> Vec<u8> {
-        let mut res: Vec<u8> = input.as_bytes().to_vec();
-        for i in 0..length - input.len() {
-            res.push(b' ');
-        }
+        let mut res = vec![' ' as u8; length - input.len()];
+        let mut res2: Vec<u8> = input.as_bytes().to_vec();
+        res.extend(res2);
+        assert_eq!(res.len(), length);
         res
     }
 
@@ -177,12 +176,10 @@ impl LSMTree {
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
         //multi threading searching on multiple Runs is not available for now
-        //let counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic<usize> according to c++ codebase.
         match self.buffer.get(&key) {
             Some(v) => {
                 //found in buffer, return the result;
                 if v != TOMBSTONE.as_bytes().to_vec() {
-                    //TODO remove wihtespace.
                     res = self.vec_u8_to_str(&v);
                     return Some(res);
                 } else {
@@ -205,7 +202,6 @@ impl LSMTree {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
                             //search();
-                            // TODO how to call this task again??? in c++ codebase, the search is task abstraction for threadpool to execute
                         } else {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need

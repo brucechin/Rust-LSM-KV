@@ -74,7 +74,7 @@ fn test_size() {
     buf.put("hello".as_bytes().to_vec(), "world".as_bytes().to_vec());
     assert_eq!(2, buf.entries.len());
     assert_eq!(10, buf.max_size);
-    //assert!(false, buf.full());
+    assert!(false == buf.full());
 }
 
 #[test]
