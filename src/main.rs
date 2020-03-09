@@ -6,18 +6,54 @@ use std::io::{BufRead, Write};
 use std::mem::size_of;
 use std::{env, io};
 
-fn command_loop(lsm_tree: &LSMTree, input: impl BufRead, mut output: impl Write) {
+fn command_loop(lsm_tree: &mut LSMTree, input: impl BufRead) {
     for line in input.lines() {
         match line {
             Ok(line) => {
                 let tokens: Vec<&str> = line.split_whitespace().collect();
-                match tokens[0] {
-                    "p" => {}
-                    "g" => {}
-                    "r" => {}
-                    "d" => {}
-                    "l" => {}
-                    _ => {}
+                if tokens.is_empty() {
+                    continue;
+                } else {
+                    match tokens[0] {
+                        "p" => {
+                            lsm_tree.put(tokens[1], tokens[2]);
+                            println!("Inserted!");
+                        }
+                        "g" => {
+                            let val = lsm_tree.get(tokens[1]);
+                            if val.is_some() {
+                                println!("The value of key: {} is {}", tokens[1], val.unwrap());
+                            } else {
+                                println!("No value with key: {} in the DB!", tokens[1]);
+                            }
+                        }
+                        "r" => {
+                            let vals = lsm_tree.range(tokens[1], tokens[2]);
+                            if vals.is_empty() {
+                                println!(
+                                    "No value with key between start: {} and end: {} in the DB!",
+                                    tokens[1], tokens[2]
+                                );
+                            } else {
+                                println!(
+                                    "Values with keys between start: {} and end: {} are:",
+                                    tokens[1], tokens[2]
+                                );
+                                for val in vals {
+                                    print!("{} ", val);
+                                }
+                                println!();
+                            }
+                        }
+                        "d" => {
+                            lsm_tree.del(tokens[1]);
+                            println!("Deleted!")
+                        }
+                        "l" => {}
+                        _ => {
+                            println!("Invalid command!");
+                        }
+                    }
                 }
             }
             Err(e) => panic!("error {} during reading input\n", e),
@@ -64,7 +100,7 @@ fn main() {
     let buffer_max_entries =
         buffer_num_pages * page_size::get() as u64 / size_of::<EntryT>() as u64;
 
-    let lsm_tree = LSMTree::new(
+    let mut lsm_tree = LSMTree::new(
         buffer_max_entries,
         depth,
         fanout,
@@ -72,5 +108,5 @@ fn main() {
         num_threads,
     );
 
-    command_loop(&lsm_tree, io::stdin().lock(), io::stdout())
+    command_loop(&mut lsm_tree, io::stdin().lock())
 }

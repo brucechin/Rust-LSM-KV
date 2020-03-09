@@ -9,9 +9,9 @@ use crate::run;
 use std::collections::HashMap;
 //use std::ptr::null;
 //use std::sync::{Arc, Mutex};
-use threadpool::ThreadPool;
 use crate::data_type;
 use std::str;
+use threadpool::ThreadPool;
 pub static DEFAULT_TREE_DEPTH: u64 = 5;
 pub static DEFAULT_TREE_FANOUT: u64 = 10;
 pub static DEFAULT_BUFFER_NUM_PAGES: u64 = 1000;
@@ -122,19 +122,19 @@ impl LSMTree {
     }
 
     fn fill_str_with_witespace(&self, input: &str, length: usize) -> Vec<u8> {
-        let mut res : Vec<u8> = input.as_bytes().to_vec();
-        for i in 0..length-input.len(){
+        let mut res: Vec<u8> = input.as_bytes().to_vec();
+        for i in 0..length - input.len() {
             res.push(b' ');
         }
         res
     }
 
-    fn vec_u8_to_str(&self, input: &Vec<u8>) -> String{
-        let res : String = str::from_utf8(input).unwrap().trim().to_owned();
+    fn vec_u8_to_str(&self, input: &Vec<u8>) -> String {
+        let res: String = str::from_utf8(input).unwrap().trim().to_owned();
         res
     }
 
-    pub fn put(&mut self, key_str : &str, value_str : &str) -> bool {
+    pub fn put(&mut self, key_str: &str, value_str: &str) -> bool {
         let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
         let mut value = self.fill_str_with_witespace(value_str, data_type::VALUE_SIZE);
         if self.buffer.full() == false {
@@ -170,10 +170,9 @@ impl LSMTree {
         }
     }
 
-
     pub fn get(&self, key_str: &str) -> Option<String> {
         let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
-        let mut res : String;
+        let mut res: String;
         //read from buffer first. then from level 0 to max_level. return first match entry.
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
@@ -193,15 +192,15 @@ impl LSMTree {
             _ => {
                 //not found in buffer, start searching in vector<Level>
 
-                for current_run in 0..10 {
+                for current_run in 0..self.depth {
                     let current_val: ValueT;
                     //let mut run: run::Run;
-                    if latest_run >= 0 || (self.get_run(current_run).is_none()) {
+                    if latest_run >= 0 || (self.get_run(current_run as usize).is_none()) {
                         // Stop search if we discovered a key in another run, or
                         // if there are no more runs to search
                         break;
                     } else {
-                        let mut run = self.get_run(current_run).unwrap();
+                        let mut run = self.get_run(current_run as usize).unwrap();
                         if run.get(&key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
@@ -212,7 +211,7 @@ impl LSMTree {
                             // last, then stop searching since there's no need
                             // to search later runs.
                             current_val = run.get(&key).unwrap();
-                            if latest_run < 0 || current_run < latest_run as usize {
+                            if latest_run < 0 || current_run < latest_run as u64 {
                                 latest_run = current_run as i32;
                                 latest_val = current_val;
                             }
@@ -234,7 +233,7 @@ impl LSMTree {
         let mut start = self.fill_str_with_witespace(start_str, data_type::KEY_SIZE);
         let mut end = self.fill_str_with_witespace(end_str, data_type::KEY_SIZE);
         let mut buffer_range: Vec<String> = Vec::new(); //this is return value list
-        if end <= start {
+        if end < start {
             //invalid input
             return buffer_range;
         }
@@ -245,11 +244,11 @@ impl LSMTree {
         ranges.insert(0, self.buffer.range(&start, &end));
 
         //search in runs. TODO search range should be num of Runs
-        for current_run in 0..10 {
-            match self.get_run(current_run) {
+        for current_run in 0..self.depth {
+            match self.get_run(current_run as usize) {
                 Some(mut r) => {
                     //start and end are used multiple times which causes "use of moved value"
-                    ranges.insert(current_run + 1, r.range(&start, &end));
+                    ranges.insert((current_run + 1) as usize, r.range(&start, &end));
                 }
                 _ => {}
             }
