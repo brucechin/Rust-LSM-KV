@@ -1,4 +1,3 @@
-use crate::bloom_filter;
 use crate::data_type::{EntryT, KeyT, ValueT, KEY_SIZE, VALUE_SIZE};
 use libc;
 use mktemp::Temp;
@@ -6,7 +5,6 @@ use mmap::{MapOption, MemoryMap};
 use page_size;
 use std::cmp::max;
 //use std::collections::linked_list::Iter;
-use bloomfilter::Bloom;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
@@ -288,7 +286,7 @@ impl Run {
         self.bloom_filter.set(&entry.key);
     }
 
-    fn file_size(&self) -> u64 {
-        self.max_size * size_of::<EntryT>() as u64
-    }
+    // fn file_size(&self) -> u64 {
+    //     self.max_size * size_of::<EntryT>() as u64
+    // }
 }

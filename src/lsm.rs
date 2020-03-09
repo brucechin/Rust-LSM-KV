@@ -11,6 +11,12 @@ use std::collections::HashMap;
 //use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 
+pub static DEFAULT_TREE_DEPTH: usize = 5;
+pub static DEFAULT_TREE_FANOUT: usize = 10;
+pub static DEFAULT_BUFFER_NUM_PAGES: usize = 1000;
+pub static DEFAULT_THREAD_COUNT: usize = 4;
+pub static DEFAULT_BF_BITS_PER_ENTRY: f32 = 0.5;
+
 pub struct LSMTree {
     levels: Vec<level::Level>,
     buffer: buffer::Buffer,
