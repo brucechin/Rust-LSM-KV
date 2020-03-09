@@ -179,8 +179,8 @@ impl LSMTree {
         match self.buffer.get(&key) {
             Some(v) => {
                 //found in buffer, return the result;
-                if v != TOMBSTONE.as_bytes().to_vec() {
-                    res = self.vec_u8_to_str(&v);
+                res = self.vec_u8_to_str(&v);
+                if res != TOMBSTONE.to_string() {
                     return Some(res);
                 } else {
                     return None;
