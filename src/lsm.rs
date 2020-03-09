@@ -230,24 +230,26 @@ impl LSMTree {
         None
     }
 
-    pub fn range(&self, start: &Vec<u8>, end: &Vec<u8>) -> Option<Vec<ValueT>> {
+    pub fn range(&self, start_str: &str, end_str: &str) -> Vec<String> {
+        let mut start = self.fill_str_with_witespace(start_str, data_type::KEY_SIZE);
+        let mut end = self.fill_str_with_witespace(end_str, data_type::KEY_SIZE);
+        let mut buffer_range: Vec<String> = Vec::new(); //this is return value list
         if end <= start {
             //invalid input
-            return None;
+            return buffer_range;
         }
-        let mut buffer_range: Vec<ValueT> = Vec::new(); //this is return value list
         let mut ranges: HashMap<usize, Vec<EntryT>> = HashMap::new(); //record candidates in each level.
         let mut merge_ctx = merge::MergeContextT::new();
         let mut entry: EntryT;
         //search in buffer and record result
-        ranges.insert(0, self.buffer.range(start, end));
+        ranges.insert(0, self.buffer.range(&start, &end));
 
         //search in runs. TODO search range should be num of Runs
         for current_run in 0..10 {
             match self.get_run(current_run) {
                 Some(mut r) => {
                     //start and end are used multiple times which causes "use of moved value"
-                    ranges.insert(current_run + 1, r.range(start, end));
+                    ranges.insert(current_run + 1, r.range(&start, &end));
                 }
                 _ => {}
             }
@@ -260,15 +262,14 @@ impl LSMTree {
             //TODO is to_vec() a good option????
             merge_ctx.add(kv.1.to_vec(), kv.1.len());
         }
-
         while !merge_ctx.done() {
             entry = merge_ctx.next();
             if entry.value != TOMBSTONE.as_bytes().to_vec() {
-                buffer_range.push(entry.value);
+                buffer_range.push(self.vec_u8_to_str(&entry.value));
             }
         }
 
-        Some(buffer_range)
+        buffer_range
     }
 
     pub fn del(&mut self, key_str: &str) {
