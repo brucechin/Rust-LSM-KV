@@ -10,6 +10,7 @@ use std::collections::HashMap;
 //use std::ptr::null;
 //use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
+use crate::data_type;
 
 pub static DEFAULT_TREE_DEPTH: u64 = 5;
 pub static DEFAULT_TREE_FANOUT: u64 = 10;
@@ -64,7 +65,7 @@ impl LSMTree {
     }
 
     //compact level i data to level i+1
-    pub fn merge_down(&mut self, current: usize) {
+    fn merge_down(&mut self, current: usize) {
         let mut merge_ctx: merge::MergeContextT = merge::MergeContextT::new();
         let mut entry: EntryT;
         let next: usize;
@@ -120,11 +121,21 @@ impl LSMTree {
         self.levels[current].runs.clear();
     }
 
-    pub fn put(&mut self, entry: EntryT) -> bool {
-        //TODO entry must be fixed size for easier put implementation.
+    fn fill_str_with_witespace(&self, input: &str, length: usize) -> Vec<u8> {
+        let mut res : Vec<u8> = input.as_bytes().to_vec();
+        for i in 0..length-input.len(){
+            res.push(b' ');
+        }
+        res
+    }
+
+    pub fn put(&mut self, key_str : &str, value_str : &str) -> bool {
+        let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
+        let mut value = self.fill_str_with_witespace(value_str, data_type::VALUE_SIZE);
+        //TODO fill key and value up to full size then convert to Vec<u8>
         if self.buffer.full() == false {
             //put to buffer success
-            self.buffer.put(entry.key, entry.value);
+            self.buffer.put(key, value);
             return true;
         } else {
             /*
@@ -150,18 +161,21 @@ impl LSMTree {
 
             //buffer already written to levels.front().runs.front(). We can clear it now for inserting new entry.
             self.buffer.empty();
-            self.buffer.put(entry.key, entry.value);
+            self.buffer.put(key, value);
             true
         }
     }
 
-    pub fn get(&self, key: &Vec<u8>) -> Option<ValueT> {
+
+    pub fn get(&self, key_str: &str) -> Option<ValueT> {
+        let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
+        //TODO fill key up to full length and convert to Vec<u8>
         //read from buffer first. then from level 0 to max_level. return first match entry.
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
         //multi threading searching on multiple Runs is not available for now
         //let counter = Arc::new(Mutex::new(0)); //TODO counter should be atomic<usize> according to c++ codebase.
-        match self.buffer.get(key) {
+        match self.buffer.get(&key) {
             Some(v) => {
                 //found in buffer, return the result;
                 if v != TOMBSTONE.as_bytes().to_vec() {
@@ -182,7 +196,7 @@ impl LSMTree {
                         break;
                     } else {
                         let mut run = self.get_run(current_run).unwrap();
-                        if run.get(key).is_none() {
+                        if run.get(&key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
                             //search();
@@ -191,7 +205,7 @@ impl LSMTree {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need
                             // to search later runs.
-                            current_val = run.get(key).unwrap();
+                            current_val = run.get(&key).unwrap();
                             if latest_run < 0 || current_run < latest_run as usize {
                                 latest_run = current_run as i32;
                                 latest_val = current_val;
@@ -250,10 +264,8 @@ impl LSMTree {
         Some(buffer_range)
     }
 
-    pub fn del(&mut self, key: Vec<u8>) {
-        let entry = EntryT::new(key, TOMBSTONE.as_bytes().to_vec());
-
-        self.put(entry);
+    pub fn del(&mut self, key_str: &str) {
+        self.put(key_str, TOMBSTONE);
     }
 
     //TODO load lsm tree from disk file
