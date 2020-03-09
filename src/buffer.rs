@@ -66,3 +66,6 @@ impl Buffer {
         }
     }
 }
+
+#[test]
+fn test_full() {}

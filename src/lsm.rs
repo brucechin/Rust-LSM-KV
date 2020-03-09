@@ -16,11 +16,33 @@ pub struct LSMTree {
     buffer: buffer::Buffer,
     worker_pool: threadpool::ThreadPool,
     bf_bits_per_entry: u64, //used for bloom filter initialization
+    depth: u64,
 }
 
 impl LSMTree {
-    pub fn new() {
+    pub fn new(
+        buf_max_entries: u64,
+        dep: u64,
+        fanout: u64,
+        bf_bits_per_entry: u64,
+        num_threads: u64,
+    ) -> LSMTree {
         //TODO implment constructor
+        let mut max_run_size = buf_max_entries;
+        let mut tmp_levels: Vec<level::Level> = Vec::new();
+        let mut tmp_deps = dep;
+        while tmp_deps > 0 {
+            tmp_levels.push(level::Level::new(fanout as usize, max_run_size as usize));
+            max_run_size *= fanout;
+            tmp_deps -= 1;
+        }
+        LSMTree {
+            levels: tmp_levels,
+            depth: dep,
+            bf_bits_per_entry: bf_bits_per_entry,
+            worker_pool: threadpool::ThreadPool::new(num_threads as usize),
+            buffer: buffer::Buffer::new(buf_max_entries as usize),
+        }
     }
 
     pub fn get_run(&self, run_id: usize) -> Option<run::Run> {
