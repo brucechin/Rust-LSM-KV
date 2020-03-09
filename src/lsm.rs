@@ -11,7 +11,7 @@ use std::collections::HashMap;
 //use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 use crate::data_type;
-
+use std::str;
 pub static DEFAULT_TREE_DEPTH: u64 = 5;
 pub static DEFAULT_TREE_FANOUT: u64 = 10;
 pub static DEFAULT_BUFFER_NUM_PAGES: u64 = 1000;
@@ -129,10 +129,14 @@ impl LSMTree {
         res
     }
 
+    fn vec_u8_to_str(&self, input: &Vec<u8>) -> String{
+        let res : String = str::from_utf8(input).unwrap().trim().to_owned();
+        res
+    }
+
     pub fn put(&mut self, key_str : &str, value_str : &str) -> bool {
         let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
         let mut value = self.fill_str_with_witespace(value_str, data_type::VALUE_SIZE);
-        //TODO fill key and value up to full size then convert to Vec<u8>
         if self.buffer.full() == false {
             //put to buffer success
             self.buffer.put(key, value);
@@ -167,9 +171,9 @@ impl LSMTree {
     }
 
 
-    pub fn get(&self, key_str: &str) -> Option<ValueT> {
+    pub fn get(&self, key_str: &str) -> Option<String> {
         let mut key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
-        //TODO fill key up to full length and convert to Vec<u8>
+        let mut res : String;
         //read from buffer first. then from level 0 to max_level. return first match entry.
         let mut latest_val: ValueT = ValueT::new();
         let mut latest_run: i32 = -1;
@@ -179,7 +183,9 @@ impl LSMTree {
             Some(v) => {
                 //found in buffer, return the result;
                 if v != TOMBSTONE.as_bytes().to_vec() {
-                    return Some(v);
+                    //TODO remove wihtespace.
+                    res = self.vec_u8_to_str(&v);
+                    return Some(res);
                 } else {
                     return None;
                 }
@@ -216,7 +222,8 @@ impl LSMTree {
                 }
 
                 if latest_run >= 0 && latest_val != TOMBSTONE.as_bytes().to_vec() {
-                    return Some(latest_val);
+                    res = self.vec_u8_to_str(&latest_val);
+                    return Some(res);
                 }
             }
         }
