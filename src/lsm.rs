@@ -26,6 +26,30 @@ pub struct LSMTree {
 }
 
 impl LSMTree {
+    /// Returns a LSM tree based key value store
+    ///
+    /// # Arguments
+    ///
+    /// * `buf_max_entries` - Max number of entries in memory buffer
+    /// * `dep` - depth of LSM tree
+    /// * `fanout` - A factor that determines how to scale Run size for deeper levels
+    /// * `bf_bits_per_entry` - Used for bloom filter size initialization
+    /// * `num_threads` - Used for thread pool initialization
+    ///
+    /// # Example
+    ///
+    /// ```
+    ///
+    /// use lsm_kv::lsm;
+    /// let mut lsm = lsm::LSMTree::new(100, 5, 10, 0.5, 4);
+    /// lsm.set("hello", "world");
+    /// lsm.set("facebook", "google");
+    /// assert_eq!(lsm.get("hello"), Some("world"));
+    /// assert_eq!(lsm.get("facebook"), Some("google"));
+    /// lsm.del("hello");
+    /// assert_eq!(lsm.get("hello"), None);
+    ///
+    /// ```
     pub fn new(
         buf_max_entries: u64,
         dep: u64,
