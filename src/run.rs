@@ -25,10 +25,10 @@ pub struct Run {
 }
 
 impl Run {
-    pub fn new(max_size: u64, bf_bits_per_entry: u64) -> Run {
+    pub fn new(max_size: u64, bf_bits_per_entry: f32) -> Run {
         Run {
             bloom_filter: bloomfilter::Bloom::new(
-                (max_size * bf_bits_per_entry) as usize,
+                (bf_bits_per_entry * max_size as f32) as usize,
                 max_size as usize,
             ),
             //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),

@@ -1,6 +1,29 @@
 use getopts::Options;
+use lsm_kv::data_type::EntryT;
 use lsm_kv::lsm;
-use std::env;
+use lsm_kv::lsm::LSMTree;
+use std::io::{BufRead, Write};
+use std::mem::size_of;
+use std::{env, io};
+
+fn command_loop(lsm_tree: &LSMTree, input: impl BufRead, mut output: impl Write) {
+    for line in input.lines() {
+        match line {
+            Ok(line) => {
+                let tokens: Vec<&str> = line.split_whitespace().collect();
+                match tokens[0] {
+                    "p" => {}
+                    "g" => {}
+                    "r" => {}
+                    "d" => {}
+                    "l" => {}
+                    _ => {}
+                }
+            }
+            Err(e) => panic!("error {} during reading input\n", e),
+        }
+    }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -37,4 +60,17 @@ fn main() {
     if matches.opt_str("r").is_some() {
         bf_bits_per_entry = matches.opt_str("r").unwrap().parse().unwrap()
     }
+
+    let buffer_max_entries =
+        buffer_num_pages * page_size::get() as u64 / size_of::<EntryT>() as u64;
+
+    let lsm_tree = LSMTree::new(
+        buffer_max_entries,
+        depth,
+        fanout,
+        bf_bits_per_entry,
+        num_threads,
+    );
+
+    command_loop(&lsm_tree, io::stdin().lock(), io::stdout())
 }

@@ -11,17 +11,17 @@ use std::collections::HashMap;
 //use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
 
-pub static DEFAULT_TREE_DEPTH: usize = 5;
-pub static DEFAULT_TREE_FANOUT: usize = 10;
-pub static DEFAULT_BUFFER_NUM_PAGES: usize = 1000;
-pub static DEFAULT_THREAD_COUNT: usize = 4;
+pub static DEFAULT_TREE_DEPTH: u64 = 5;
+pub static DEFAULT_TREE_FANOUT: u64 = 10;
+pub static DEFAULT_BUFFER_NUM_PAGES: u64 = 1000;
+pub static DEFAULT_THREAD_COUNT: u64 = 4;
 pub static DEFAULT_BF_BITS_PER_ENTRY: f32 = 0.5;
 
 pub struct LSMTree {
     levels: Vec<level::Level>,
     buffer: buffer::Buffer,
     worker_pool: threadpool::ThreadPool,
-    bf_bits_per_entry: u64, //used for bloom filter initialization
+    bf_bits_per_entry: f32, //used for bloom filter initialization
     depth: u64,
 }
 
@@ -30,7 +30,7 @@ impl LSMTree {
         buf_max_entries: u64,
         dep: u64,
         fanout: u64,
-        bf_bits_per_entry: u64,
+        bf_bits_per_entry: f32,
         num_threads: u64,
     ) -> LSMTree {
         //TODO implment constructor
