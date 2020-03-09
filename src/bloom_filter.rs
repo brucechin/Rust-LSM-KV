@@ -11,11 +11,12 @@ pub type IndexT = u64;
 
 #[test]
 fn test_Bloom() {
-    let mut bloom = Bloom::new(100000, 1000);
-    bloom.set("hello");
-    bloom.set("world");
-    assert!(bloom.check("hello"), true);
-    println!("{}", bloom.check("helloo"));
+    let mut bloom: Bloom<Vec<u8>> = Bloom::new(100000, 1000);
+    bloom.set(&vec![1, 2, 3, 4]);
+    bloom.set(&"asd".as_bytes().to_vec());
+    assert!(true, bloom.check(&"asd".as_bytes().to_vec()));
+    //assert!(bloom.check("hello"), true);
+    //println!("{}", bloom.check("helloo"));
 }
 
 #[derive(Debug)]
