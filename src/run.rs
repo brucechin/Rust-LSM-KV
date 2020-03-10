@@ -114,7 +114,7 @@ impl Run {
         let len = size_of::<EntryT>() * self.max_size as usize;
 
         unsafe {
-            assert!(libc::lseek(self.mapping_fd, len as i64, 0) != -1);
+            assert!(libc::lseek(self.mapping_fd, (len - 1) as i64, 0) != -1);
             assert!(libc::write(self.mapping_fd, "".as_ptr() as *const c_void, 1) != -1);
         }
 
