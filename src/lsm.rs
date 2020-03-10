@@ -26,6 +26,32 @@ pub struct LSMTree {
 }
 
 impl LSMTree {
+    /// Returns a LSM tree based key value store
+    ///
+    /// # Arguments
+    ///
+    /// * `buf_max_entries` - Max number of entries in memory buffer
+    /// * `dep` - depth of LSM tree
+    /// * `fanout` - A factor that determines how to scale Run size for deeper levels
+    /// * `bf_bits_per_entry` - Used for bloom filter size initialization
+    /// * `num_threads` - Used for thread pool initialization
+    ///
+    /// # Example
+    ///
+    /// ```
+    ///
+    /// use lsm_kv::lsm;
+    /// let mut lsm = lsm::LSMTree::new(100, 5, 10, 0.5, 4);
+    /// lsm.set("hello", "world");
+    /// lsm.set("facebook", "google");
+    /// lsm.set("amazon", "linkedin");
+    /// assert_eq!(lsm.get("hello"), Some("world"));
+    /// assert_eq!(lsm.get("facebook"), Some("google"));
+    /// lsm.del("hello");
+    /// assert_eq!(lsm.get("hello"), None);
+    /// lsm.range("amazon", "facebook");
+    ///
+    /// ```
     pub fn new(
         buf_max_entries: u64,
         dep: u64,
@@ -33,7 +59,6 @@ impl LSMTree {
         bf_bits_per_entry: f32,
         num_threads: u64,
     ) -> LSMTree {
-        //TODO implment constructor
         let mut max_run_size = buf_max_entries;
         let mut tmp_levels: Vec<level::Level> = Vec::new();
         let mut tmp_deps = dep;
@@ -241,7 +266,6 @@ impl LSMTree {
         //search in buffer and record result
         ranges.insert(0, self.buffer.range(&start, &end));
 
-        //search in runs. TODO search range should be num of Runs
         for current_run in 0..self.depth {
             match self.get_run(current_run as usize) {
                 Some(mut r) => {
@@ -251,9 +275,6 @@ impl LSMTree {
                 _ => {}
             }
         }
-
-        //TODO Merge ranges and return values. because there could be old values in ranges to be eliminated.
-        // Only the latest values should be kept
 
         for kv in ranges.iter() {
             //TODO is to_vec() a good option????
