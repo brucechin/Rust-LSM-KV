@@ -70,7 +70,10 @@ impl Buffer {
 #[test]
 fn test_size() {
     let mut buf = Buffer::new(10);
-    buf.put("helloworld".as_bytes().to_vec(), "worldhello".as_bytes().to_vec());
+    buf.put(
+        "helloworld".as_bytes().to_vec(),
+        "worldhello".as_bytes().to_vec(),
+    );
     buf.put("hello".as_bytes().to_vec(), "world".as_bytes().to_vec());
     assert_eq!(2, buf.entries.len());
     assert_eq!(10, buf.max_size);
@@ -80,10 +83,10 @@ fn test_size() {
 #[test]
 fn test_put_get() {
     let mut buf = Buffer::new(10);
-    for i in 0..10u8{
+    for i in 0..10u8 {
         buf.put(vec![i], vec![i]);
     }
-    for j in 0..10u8{
+    for j in 0..10u8 {
         assert_eq!(vec![j], buf.get(&vec![j]).unwrap());
     }
 }
@@ -91,10 +94,10 @@ fn test_put_get() {
 #[test]
 fn test_range() {
     let mut buf = Buffer::new(10);
-    for i in 0..10u8{
+    for i in 0..10u8 {
         buf.put(vec![i], vec![i]);
     }
-    for j in 0..5u8{
+    for j in 0..5u8 {
         assert_eq!(vec![j + 1], buf.range(&vec![1], &vec![5])[j as usize].value);
     }
     //println!("{:?}", buf.range(&vec![1], &vec![5])[0].value);

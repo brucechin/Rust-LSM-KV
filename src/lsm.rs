@@ -44,10 +44,12 @@ impl LSMTree {
     /// let mut lsm = lsm::LSMTree::new(100, 5, 10, 0.5, 4);
     /// lsm.set("hello", "world");
     /// lsm.set("facebook", "google");
+    /// lsm.set("amazon", "linkedin");
     /// assert_eq!(lsm.get("hello"), Some("world"));
     /// assert_eq!(lsm.get("facebook"), Some("google"));
     /// lsm.del("hello");
     /// assert_eq!(lsm.get("hello"), None);
+    /// lsm.range("amazon", "facebook");
     ///
     /// ```
     pub fn new(
@@ -57,7 +59,6 @@ impl LSMTree {
         bf_bits_per_entry: f32,
         num_threads: u64,
     ) -> LSMTree {
-        //TODO implment constructor
         let mut max_run_size = buf_max_entries;
         let mut tmp_levels: Vec<level::Level> = Vec::new();
         let mut tmp_deps = dep;
@@ -265,7 +266,6 @@ impl LSMTree {
         //search in buffer and record result
         ranges.insert(0, self.buffer.range(&start, &end));
 
-        //search in runs. TODO search range should be num of Runs
         for current_run in 0..self.depth {
             match self.get_run(current_run as usize) {
                 Some(mut r) => {
@@ -275,9 +275,6 @@ impl LSMTree {
                 _ => {}
             }
         }
-
-        //TODO Merge ranges and return values. because there could be old values in ranges to be eliminated.
-        // Only the latest values should be kept
 
         for kv in ranges.iter() {
             //TODO is to_vec() a good option????
