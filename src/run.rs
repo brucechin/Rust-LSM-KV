@@ -65,7 +65,6 @@ impl Run {
             ],
         ) {
             Ok(map) => unsafe {
-                assert_eq!(map.len(), KEY_SIZE + VALUE_SIZE);
                 self.mapping = Some(map);
                 let mut res: Vec<EntryT> = Vec::new();
                 for i in 0..self.size {
@@ -99,8 +98,6 @@ impl Run {
     pub fn map_write(&mut self) {
         assert!(self.mapping.is_none());
 
-        let len = size_of::<EntryT>() * self.max_size as usize;
-
         match OpenOptions::new()
             .read(true)
             .write(true)
@@ -113,6 +110,9 @@ impl Run {
             }
             Err(_) => panic!("Open temp file failed!"),
         };
+
+        let len = size_of::<EntryT>() * self.max_size as usize;
+
         unsafe {
             assert!(libc::lseek(self.mapping_fd, len as i64, 0) != -1);
             assert!(libc::write(self.mapping_fd, "".as_ptr() as *const c_void, 1) != -1);
@@ -128,7 +128,6 @@ impl Run {
             ],
         ) {
             Ok(map) => {
-                assert_eq!(map.len(), KEY_SIZE + VALUE_SIZE);
                 self.mapping = Some(map);
             }
             Err(_) => panic!("Mapping failed!"),
