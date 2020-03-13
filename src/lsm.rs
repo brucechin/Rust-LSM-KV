@@ -10,13 +10,17 @@ use std::collections::HashMap;
 //use std::ptr::null;
 //use std::sync::{Arc, Mutex};
 use crate::data_type;
-use std::str;
+use core::panicking::panic_fmt;
+use std::path::{Path, PathBuf};
+use std::{fs, str};
+
 pub static DEFAULT_TREE_DEPTH: u64 = 5;
 pub static DEFAULT_TREE_FANOUT: u64 = 10;
 pub static DEFAULT_BUFFER_NUM_PAGES: u64 = 1000;
 pub static DEFAULT_THREAD_COUNT: u64 = 4;
 pub static DEFAULT_BF_BITS_PER_ENTRY: f32 = 0.5;
 pub static DEFAULT_TREE_NAME: &str = "rust";
+
 pub struct LSMTree {
     levels: Vec<level::Level>,
     buffer: buffer::Buffer,
@@ -52,6 +56,10 @@ impl LSMTree {
     /// lsm.del("hello");
     /// assert_eq!(lsm.get("hello"), None);
     /// lsm.range("amazon", "facebook");
+    /// lsm.close();
+    /// let mut lsm2 = lsm::LSMTree::new(100, 5, 10, 0.5, 4, "hello".to_string());
+    /// lsm2.load();
+    /// assert_eq!(lsm2.get("facebook"), Some("google".to_string()));
     ///
     /// ```
     pub fn new(
@@ -128,9 +136,12 @@ impl LSMTree {
             merge_ctx.add(run.map_read_default(), run.size as usize);
         }
         let size = self.levels[next].max_run_size as u64;
-        self.levels[next]
-            .runs
-            .push_front(run::Run::new(size, self.bf_bits_per_entry, &self.tree_name, next));
+        self.levels[next].runs.push_front(run::Run::new(
+            size,
+            self.bf_bits_per_entry,
+            &self.tree_name,
+            next,
+        ));
         //start writing back this compacted run in next level to a new file on disk
         self.levels[next].runs[0].map_write();
         while !merge_ctx.done() {
@@ -181,9 +192,12 @@ impl LSMTree {
              * Flush the buffer to level 0.
              */
             let size = self.levels[0].max_run_size as u64;
-            self.levels[0]
-                .runs
-                .push_front(run::Run::new(size, self.bf_bits_per_entry, &self.tree_name, 0));
+            self.levels[0].runs.push_front(run::Run::new(
+                size,
+                self.bf_bits_per_entry,
+                &self.tree_name,
+                0,
+            ));
             self.levels[0].runs[0].map_write();
 
             for entry_in_buf in self.buffer.entries.iter() {
@@ -299,16 +313,72 @@ impl LSMTree {
         self.put(key_str, TOMBSTONE);
     }
 
-    //TODO load lsm tree from disk file
-
-    pub fn load(&mut self, tree_name: &str) {}
+    pub fn load(&mut self) {
+        //TODO iterate through every level subdir in the directory "/tmp/tree_name/" and load Runs
+        for depth in 0..self.levels.len() {
+            let level_dir: &Path = Path::new(&format!("/tmp/{}/{}/", self.tree_name));
+            //visit every run and load into LSMTree vec<Level>
+            if level_dir.is_dir() {
+                for run_file in fs::read_dir(path) {
+                    println!("{}", run_file);
+                    self.levels[depth].push(run::Run {
+                        //TODO should load the old bloomfilter data instead of a brand new one.
+                        bloom_filter: bloomfilter::Bloom::new(
+                            (bf_bits_per_entry * max_size as f32) as usize,
+                            max_size as usize,
+                        ),
+                        //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
+                        fence_pointers: Vec::with_capacity(
+                            (self.levels[depth].max_run_size as u64 / page_size::get() as u64)
+                                as usize,
+                        ),
+                        max_key: data_type::KeyT::default(),
+                        mapping: None,
+                        mapping_fd: -1,
+                        size: 0,
+                        max_size: self.levels[depth].max_run_size as u64,
+                        level_index: depth,
+                        tmp_file: PathBuf::from(run_file).unwrap().as_ref().to_owned(),
+                    });
+                }
+            }
+        }
+    }
 
     pub fn close(&mut self) {
-        //TODO save the buffer as a Run in level 0 even if it is not full.
+        //save the buffer as a Run in level 0 even if it is not full.
+        self.merge_down(0);
+
+        /*
+         * Flush the buffer to level 0.
+         */
+        let size = self.levels[0].max_run_size as u64;
+        self.levels[0].runs.push_front(run::Run::new(
+            size,
+            self.bf_bits_per_entry,
+            &self.tree_name,
+            0,
+        ));
+        self.levels[0].runs[0].map_write();
+
+        for entry_in_buf in self.buffer.entries.iter() {
+            self.levels[0].runs[0].put(&entry_in_buf);
+        }
+        //TODO save bloom filter data to this file
+        self.levels[0].runs[0].unmap();
+
+        //buffer already written to levels.front().runs.front(). We can clear it now for inserting new entry.
+        self.buffer.empty();
     }
 }
 
 #[test]
 fn test_lsm() {
     println!("hello lsm test");
+}
+
+#[test]
+fn test_load() {
+    let mut lsm = LSMTree::new(100, 5, 10, 0.5, 4, "hello".to_string());
+    lsm.load();
 }
