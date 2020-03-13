@@ -9,7 +9,7 @@ use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
 use std::os::raw::c_void;
-use std::os::unix::io::AsRawFd;
+use std::os::unix::prelude::*;
 use std::path::PathBuf;
 
 pub struct Run {
@@ -63,7 +63,7 @@ impl Run {
             size: 0,
             max_size: max_size,
             level_index: level,
-            tmp_file: PathBuf::from(format!(r"./{}/{}/run_file-{}", lsm_name, level, id)),
+            tmp_file: PathBuf::from(format!(r"/tmp/{}/{}/run_file-{}.txt", lsm_name, level, id)),
         }
     }
 
@@ -155,7 +155,7 @@ impl Run {
             Ok(map) => {
                 self.mapping = Some(map);
             }
-            Err(_) => panic!("Mapping failed!"),
+            Err(e) => panic!("Mapping failed because {}", e),
         }
     }
 
