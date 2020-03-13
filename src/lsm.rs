@@ -71,11 +71,21 @@ impl LSMTree {
         let mut max_run_size = buf_max_entries;
         let mut tmp_levels: Vec<level::Level> = Vec::new();
         let mut tmp_deps = dep;
+        //create a directory for store files on disk
+        fs::create_dir(format!("/tmp/{}/", tree_name));
         while tmp_deps > 0 {
+            //level id starts from 0 to depth-1
+            fs::create_dir(format!(
+                "/tmp/{}/{}/",
+                tree_name,
+                tmp_levels.len().to_string()
+            ));
             tmp_levels.push(level::Level::new(fanout as usize, max_run_size as usize));
+            //create a subdir for corresponding level
             max_run_size *= fanout;
             tmp_deps -= 1;
         }
+
         LSMTree {
             levels: tmp_levels,
             depth: dep,
@@ -379,9 +389,9 @@ fn test_lsm() {
 }
 
 #[test]
-fn test_merge(){
+fn test_merge() {
     let mut lsm = LSMTree::new(10, 5, 10, 0.5, 4, "hello".to_string());
-    for i in 0..1000{
+    for i in 0..1000 {
         lsm.put(&i.to_string(), &i.to_string());
     }
 }
