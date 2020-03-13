@@ -379,6 +379,14 @@ fn test_lsm() {
 }
 
 #[test]
+fn test_merge(){
+    let mut lsm = LSMTree::new(10, 5, 10, 0.5, 4, "hello".to_string());
+    for i in 0..1000{
+        lsm.put(&i.to_string(), &i.to_string());
+    }
+}
+
+#[test]
 fn test_load() {
     let mut lsm = LSMTree::new(100, 5, 10, 0.5, 4, "hello".to_string());
     lsm.load();
