@@ -26,22 +26,22 @@ pub struct Run {
 }
 
 impl Run {
-    pub fn new(max_size: u64, bf_bits_per_entry: f32) -> Run {
-        Run {
-            bloom_filter: bloomfilter::Bloom::new(
-                (bf_bits_per_entry * max_size as f32) as usize,
-                max_size as usize,
-            ),
-            //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
-            fence_pointers: Vec::with_capacity((max_size / page_size::get() as u64) as usize),
-            max_key: KeyT::default(),
-            mapping: None,
-            mapping_fd: -1,
-            size: 0,
-            max_size: max_size,
-            tmp_file: Temp::new_file_in("/tmp/").unwrap().as_ref().to_owned(),
-        }
-    }
+    // pub fn new(max_size: u64, bf_bits_per_entry: f32) -> Run {
+    //     Run {
+    //         bloom_filter: bloomfilter::Bloom::new(
+    //             (bf_bits_per_entry * max_size as f32) as usize,
+    //             max_size as usize,
+    //         ),
+    //         //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
+    //         fence_pointers: Vec::with_capacity((max_size / page_size::get() as u64) as usize),
+    //         max_key: KeyT::default(),
+    //         mapping: None,
+    //         mapping_fd: -1,
+    //         size: 0,
+    //         max_size: max_size,
+    //         tmp_file: Temp::new_file_in("/tmp/").unwrap().as_ref().to_owned(),
+    //     }
+    // }
 
     pub fn new(max_size: u64, bf_bits_per_entry: f32, lsm_name: &str, level: usize) -> Run {
         Run {
@@ -57,7 +57,7 @@ impl Run {
             size: 0,
             max_size: max_size,
             level_index: level,
-            tmp_file: Temp::new_file_in("/tmp/" + folder_path + "/" + level.to_string() + "/").unwrap().as_ref().to_owned(),
+            tmp_file: Temp::new_file_in(format!("/tmp/{}/{}/", lsm_name, level.to_string())).unwrap().as_ref().to_owned(),
         }
     }
 

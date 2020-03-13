@@ -44,11 +44,11 @@ impl LSMTree {
     ///
     /// use lsm_kv::lsm;
     /// let mut lsm = lsm::LSMTree::new(100, 5, 10, 0.5, 4, "hello".to_string());
-    /// lsm.set("hello", "world");
-    /// lsm.set("facebook", "google");
-    /// lsm.set("amazon", "linkedin");
-    /// assert_eq!(lsm.get("hello"), Some("world"));
-    /// assert_eq!(lsm.get("facebook"), Some("google"));
+    /// lsm.put("hello", "world");
+    /// lsm.put("facebook", "google");
+    /// lsm.put("amazon", "linkedin");
+    /// assert_eq!(lsm.get("hello"), Some("world".to_string()));
+    /// assert_eq!(lsm.get("facebook"), Some("google".to_string()));
     /// lsm.del("hello");
     /// assert_eq!(lsm.get("hello"), None);
     /// lsm.range("amazon", "facebook");
@@ -183,7 +183,7 @@ impl LSMTree {
             let size = self.levels[0].max_run_size as u64;
             self.levels[0]
                 .runs
-                .push_front(run::Run::new(size, self.bf_bits_per_entry, self.folder_path));
+                .push_front(run::Run::new(size, self.bf_bits_per_entry, &self.tree_name, 0));
             self.levels[0].runs[0].map_write();
 
             for entry_in_buf in self.buffer.entries.iter() {
