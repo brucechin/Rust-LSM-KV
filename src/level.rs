@@ -9,7 +9,7 @@ pub struct Level {
 }
 
 impl Level {
-    pub fn new(max_runs : usize, max_run_size : usize) -> Level {
+    pub fn new(max_runs: usize, max_run_size: usize) -> Level {
         Level {
             runs: VecDeque::new(),
             max_runs: max_runs,

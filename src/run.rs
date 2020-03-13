@@ -13,16 +13,16 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 
 pub struct Run {
-    bloom_filter: bloomfilter::Bloom<KeyT>,
+    pub bloom_filter: bloomfilter::Bloom<KeyT>,
     //bloom_filer: bloom_filter::BloomFilter,
-    fence_pointers: Vec<KeyT>,
-    max_key: KeyT,
-    mapping: Option<MemoryMap>,
-    mapping_fd: raw::c_int,
+    pub fence_pointers: Vec<KeyT>,
+    pub max_key: KeyT,
+    pub mapping: Option<MemoryMap>,
+    pub mapping_fd: raw::c_int,
     pub size: u64,
-    max_size: u64,
-    tmp_file: PathBuf,
-    level_index: usize,
+    pub max_size: u64,
+    pub tmp_file: PathBuf,
+    pub level_index: usize,
 }
 
 impl Run {
@@ -57,7 +57,10 @@ impl Run {
             size: 0,
             max_size: max_size,
             level_index: level,
-            tmp_file: Temp::new_file_in(format!("/tmp/{}/{}/", lsm_name, level.to_string())).unwrap().as_ref().to_owned(),
+            tmp_file: Temp::new_file_in(format!("/tmp/{}/{}/", lsm_name, level.to_string()))
+                .unwrap()
+                .as_ref()
+                .to_owned(),
         }
     }
 

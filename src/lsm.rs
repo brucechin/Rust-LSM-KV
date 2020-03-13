@@ -3,6 +3,8 @@ use crate::data_type::{EntryT, ValueT, TOMBSTONE};
 use crate::level;
 use crate::merge;
 use crate::run;
+use std::io;
+
 //use bit_vec::Iter;
 //use rand::distributions::weighted::WeightedError::TooMany;
 //use std::borrow::Borrow;
@@ -10,7 +12,6 @@ use std::collections::HashMap;
 //use std::ptr::null;
 //use std::sync::{Arc, Mutex};
 use crate::data_type;
-use core::panicking::panic_fmt;
 use std::path::{Path, PathBuf};
 use std::{fs, str};
 
@@ -56,12 +57,9 @@ impl LSMTree {
     /// lsm.del("hello");
     /// assert_eq!(lsm.get("hello"), None);
     /// lsm.range("amazon", "facebook");
-    /// lsm.close();
-    /// let mut lsm2 = lsm::LSMTree::new(100, 5, 10, 0.5, 4, "hello".to_string());
-    /// lsm2.load();
-    /// assert_eq!(lsm2.get("facebook"), Some("google".to_string()));
     ///
     /// ```
+    //TODO after loading the read will fail due to bloom filter problem
     pub fn new(
         buf_max_entries: u64,
         dep: u64,
@@ -313,36 +311,39 @@ impl LSMTree {
         self.put(key_str, TOMBSTONE);
     }
 
-    pub fn load(&mut self) {
+    pub fn load(&mut self) -> io::Result<()> {
         //TODO iterate through every level subdir in the directory "/tmp/tree_name/" and load Runs
         for depth in 0..self.levels.len() {
-            let level_dir: &Path = Path::new(&format!("/tmp/{}/{}/", self.tree_name));
+            let level_dir_str = format!("/tmp/{}/{}/", self.tree_name, depth).to_string();
+            let level_dir: &Path = Path::new(&level_dir_str);
+            let max_size = self.levels[depth].max_run_size;
             //visit every run and load into LSMTree vec<Level>
             if level_dir.is_dir() {
-                for run_file in fs::read_dir(path) {
-                    println!("{}", run_file);
-                    self.levels[depth].push(run::Run {
+                for run_file in fs::read_dir(level_dir)? {
+                    //println!("{?}", run_file);
+                    let run_file_entry = run_file?;
+                    self.levels[depth].runs.push_back(run::Run {
                         //TODO should load the old bloomfilter data instead of a brand new one.
                         bloom_filter: bloomfilter::Bloom::new(
-                            (bf_bits_per_entry * max_size as f32) as usize,
+                            (self.bf_bits_per_entry * max_size as f32) as usize,
                             max_size as usize,
                         ),
                         //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
                         fence_pointers: Vec::with_capacity(
-                            (self.levels[depth].max_run_size as u64 / page_size::get() as u64)
-                                as usize,
+                            (max_size as u64 / page_size::get() as u64) as usize,
                         ),
                         max_key: data_type::KeyT::default(),
                         mapping: None,
                         mapping_fd: -1,
                         size: 0,
-                        max_size: self.levels[depth].max_run_size as u64,
+                        max_size: max_size as u64,
                         level_index: depth,
-                        tmp_file: PathBuf::from(run_file).unwrap().as_ref().to_owned(),
+                        tmp_file: PathBuf::from(run_file_entry.path()),
                     });
                 }
             }
         }
+        Ok(())
     }
 
     pub fn close(&mut self) {
