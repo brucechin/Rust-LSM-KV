@@ -16,13 +16,15 @@ pub static DEFAULT_TREE_FANOUT: u64 = 10;
 pub static DEFAULT_BUFFER_NUM_PAGES: u64 = 1000;
 pub static DEFAULT_THREAD_COUNT: u64 = 4;
 pub static DEFAULT_BF_BITS_PER_ENTRY: f32 = 0.5;
-
+pub static DEFAULT_TREE_NAME: &str = "rust";
 pub struct LSMTree {
     levels: Vec<level::Level>,
     buffer: buffer::Buffer,
     worker_pool: threadpool::ThreadPool,
-    bf_bits_per_entry: f32, //used for bloom filter initialization
+    bf_bits_per_entry: f32,
+    //used for bloom filter initialization
     depth: u64,
+    tree_name: String,
 }
 
 impl LSMTree {
@@ -41,7 +43,7 @@ impl LSMTree {
     /// ```
     ///
     /// use lsm_kv::lsm;
-    /// let mut lsm = lsm::LSMTree::new(100, 5, 10, 0.5, 4);
+    /// let mut lsm = lsm::LSMTree::new(100, 5, 10, 0.5, 4, "hello".to_string());
     /// lsm.set("hello", "world");
     /// lsm.set("facebook", "google");
     /// lsm.set("amazon", "linkedin");
@@ -58,6 +60,7 @@ impl LSMTree {
         fanout: u64,
         bf_bits_per_entry: f32,
         num_threads: u64,
+        tree_name: String,
     ) -> LSMTree {
         let mut max_run_size = buf_max_entries;
         let mut tmp_levels: Vec<level::Level> = Vec::new();
@@ -73,6 +76,7 @@ impl LSMTree {
             bf_bits_per_entry: bf_bits_per_entry,
             worker_pool: threadpool::ThreadPool::new(num_threads as usize),
             buffer: buffer::Buffer::new(buf_max_entries as usize),
+            tree_name: tree_name,
         }
     }
 
@@ -126,7 +130,7 @@ impl LSMTree {
         let size = self.levels[next].max_run_size as u64;
         self.levels[next]
             .runs
-            .push_front(run::Run::new(size, self.bf_bits_per_entry));
+            .push_front(run::Run::new(size, self.bf_bits_per_entry, &self.tree_name, next));
         //start writing back this compacted run in next level to a new file on disk
         self.levels[next].runs[0].map_write();
         while !merge_ctx.done() {
@@ -179,7 +183,7 @@ impl LSMTree {
             let size = self.levels[0].max_run_size as u64;
             self.levels[0]
                 .runs
-                .push_front(run::Run::new(size, self.bf_bits_per_entry));
+                .push_front(run::Run::new(size, self.bf_bits_per_entry, self.folder_path));
             self.levels[0].runs[0].map_write();
 
             for entry_in_buf in self.buffer.entries.iter() {
@@ -297,9 +301,11 @@ impl LSMTree {
 
     //TODO load lsm tree from disk file
 
-    //    pub fn load(&mut self, filename : &str){
-    //
-    //    }
+    pub fn load(&mut self, tree_name: &str) {}
+
+    pub fn close(&mut self) {
+        //TODO save the buffer as a Run in level 0 even if it is not full.
+    }
 }
 
 #[test]

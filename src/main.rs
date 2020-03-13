@@ -69,6 +69,7 @@ fn main() {
     let mut fanout = lsm::DEFAULT_TREE_FANOUT;
     let mut num_threads = lsm::DEFAULT_THREAD_COUNT;
     let mut bf_bits_per_entry = lsm::DEFAULT_BF_BITS_PER_ENTRY;
+    let mut tree_name = lsm::DEFAULT_TREE_NAME;
 
     let mut opts = Options::new();
     opts.optopt("b", "", "number of pages in buffer", "PAGE_NUM");
@@ -105,6 +106,7 @@ fn main() {
         fanout,
         bf_bits_per_entry,
         num_threads,
+        tree_name.to_string(),
     );
 
     command_loop(&mut lsm_tree, io::stdin().lock())
