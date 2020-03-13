@@ -134,11 +134,13 @@ impl LSMTree {
             merge_ctx.add(run.map_read_default(), run.size as usize);
         }
         let size = self.levels[next].max_run_size as u64;
+        let id = self.levels[next].runs.len();
         self.levels[next].runs.push_front(run::Run::new(
             size,
             self.bf_bits_per_entry,
             &self.tree_name,
             next,
+            id,
         ));
         //start writing back this compacted run in next level to a new file on disk
         self.levels[next].runs[0].map_write();
@@ -190,11 +192,13 @@ impl LSMTree {
              * Flush the buffer to level 0.
              */
             let size = self.levels[0].max_run_size as u64;
+            let id = self.levels[0].runs.len();
             self.levels[0].runs.push_front(run::Run::new(
                 size,
                 self.bf_bits_per_entry,
                 &self.tree_name,
                 0,
+                id,
             ));
             self.levels[0].runs[0].map_write();
 
@@ -354,11 +358,13 @@ impl LSMTree {
          * Flush the buffer to level 0.
          */
         let size = self.levels[0].max_run_size as u64;
+        let id = self.levels[0].runs.len();
         self.levels[0].runs.push_front(run::Run::new(
             size,
             self.bf_bits_per_entry,
             &self.tree_name,
             0,
+            id,
         ));
         self.levels[0].runs[0].map_write();
 
@@ -379,9 +385,9 @@ fn test_lsm() {
 }
 
 #[test]
-fn test_merge(){
+fn test_merge() {
     let mut lsm = LSMTree::new(10, 5, 10, 0.5, 4, "hello".to_string());
-    for i in 0..1000{
+    for i in 0..1000 {
         lsm.put(&i.to_string(), &i.to_string());
     }
 }

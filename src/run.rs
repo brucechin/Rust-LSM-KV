@@ -43,7 +43,13 @@ impl Run {
     //     }
     // }
 
-    pub fn new(max_size: u64, bf_bits_per_entry: f32, lsm_name: &str, level: usize) -> Run {
+    pub fn new(
+        max_size: u64,
+        bf_bits_per_entry: f32,
+        lsm_name: &str,
+        level: usize,
+        id: usize,
+    ) -> Run {
         Run {
             bloom_filter: bloomfilter::Bloom::new(
                 (bf_bits_per_entry * max_size as f32) as usize,
@@ -57,10 +63,7 @@ impl Run {
             size: 0,
             max_size: max_size,
             level_index: level,
-            tmp_file: Temp::new_file_in(format!("/tmp/{}/{}/", lsm_name, level.to_string()))
-                .unwrap()
-                .as_ref()
-                .to_owned(),
+            tmp_file: PathBuf::from(format!(r"./{}/{}/run_file-{}", lsm_name, level, id)),
         }
     }
 
@@ -130,7 +133,7 @@ impl Run {
             Ok(fd) => {
                 self.mapping_fd = fd.as_raw_fd();
             }
-            Err(_) => panic!("Open temp file failed!"),
+            Err(e) => panic!("Open temp file failed because {}!", e),
         };
 
         let len = size_of::<EntryT>() * self.max_size as usize;
