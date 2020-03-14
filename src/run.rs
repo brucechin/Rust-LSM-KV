@@ -97,7 +97,7 @@ impl Run {
                 Ok(mmap) => {
                     self.mapping = Some(mmap.make_mut().unwrap());
                     let mut res: Vec<EntryT> = Vec::new();
-                    for i in 0..self.size {
+                    for i in 0..len / size_of::<EntryT>() {
                         let offset = size_of::<EntryT>() * i as usize;
                         res.push(EntryT {
                             key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE]
@@ -190,7 +190,7 @@ impl Run {
             Some(val)
         } else {
             //not in this run according to bloom filter
-            println!("not in this Run according to bloom filter");
+            //println!("not in this Run according to bloom filter");
             None
         }
     }
@@ -259,7 +259,7 @@ impl Run {
     pub fn put(&mut self, entry: &EntryT) {
         assert!(self.size < self.max_size);
 
-        if self.size % page_size::get() as u64 == 0 {
+        if self.size % (page_size::get() / size_of::<EntryT>()) as u64 == 0 {
             self.fence_pointers.push(entry.key.clone());
         }
 

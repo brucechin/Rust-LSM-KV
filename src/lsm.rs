@@ -96,14 +96,13 @@ impl LSMTree {
         }
     }
 
-    pub fn get_run(&mut self, run_id: usize) -> Option<&mut run::Run> {
-        let mut index = run_id;
+    pub fn get_run(&mut self, mut run_id: usize) -> Option<&mut run::Run> {
         for level in &mut self.levels {
             if run_id < level.runs.len() {
                 //println!("get run {}", run_id);
                 return level.runs.get_mut(run_id);
             } else {
-                index -= level.runs.len();
+                run_id -= level.runs.len();
             }
         }
         None
@@ -247,13 +246,13 @@ impl LSMTree {
             }
             _ => {
                 //not found in buffer, start searching in vector<Level>
-                println!("key {} not found in buffer", str::from_utf8(&key).unwrap());
+                //println!("key {} not found in buffer", str::from_utf8(&key).unwrap());
                 for current_run in 0..self.depth * self.levels.len() as u64 {
                     let current_val: ValueT;
-                    println!(
-                        "search in Run {}, latest_run is {}",
-                        current_run, latest_run
-                    );
+                    // println!(
+                    //     "search in Run {}, latest_run is {}",
+                    //     current_run, latest_run
+                    // );
                     //let mut run: run::Run;
                     if latest_run >= 0 || (self.get_run(current_run as usize).is_none()) {
                         // Stop search if we discovered a key in another run, or
@@ -265,11 +264,11 @@ impl LSMTree {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
                             //search();
-                            println!(
-                                "key {} not found in Run {}",
-                                str::from_utf8(&key).unwrap(),
-                                current_run
-                            );
+                            // println!(
+                            //     "key {} not found in Run {}",
+                            //     str::from_utf8(&key).unwrap(),
+                            //     current_run
+                            // );
                         } else {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need
@@ -413,7 +412,7 @@ fn test_merge() {
     for i in 0..1000 {
         lsm.put(&i.to_string(), &i.to_string());
     }
-    for j in 0..100 {
+    for j in 0..1000 {
         println!("{:?}", lsm.get(&j.to_string()));
     }
 }
