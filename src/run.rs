@@ -195,6 +195,20 @@ impl Run {
         }
     }
 
+    pub fn get_keys(&mut self) -> Vec<KeyT> {
+        self.map_read_default();
+        let mut res: Vec<KeyT> = Vec::new();
+        for i in 0..self.max_size {
+            let offset = ENTRY_SIZE * i as usize;
+            let key = self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec();
+            if key[KEY_SIZE - 1] == 32 {
+                break;
+            }
+            res.push(key);
+        }
+        res
+    }
+
     pub fn range(&mut self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
         let mut res: Vec<EntryT> = Vec::new();
 
@@ -293,20 +307,20 @@ fn run_test() {
     fs::create_dir("/tmp/unit_test/0");
     let mut run = run::Run::new(10, 0.5, "unit_test", 0, 0);
     let entry1 = EntryT {
-        key: vec![97; 8],
-        value: vec![98; 32],
+        key: vec![97; KEY_SIZE],
+        value: vec![33; VALUE_SIZE],
     };
     let entry2 = EntryT {
-        key: vec![98; 8],
-        value: vec![99; 32],
+        key: vec![98; KEY_SIZE],
+        value: vec![33; VALUE_SIZE],
     };
     run.map_write();
     run.put(&entry1);
     run.put(&entry2);
     run.unmap();
-    let key1: Vec<u8> = vec![97; 8];
-    let key2: Vec<u8> = vec![98; 8];
+    let key1: Vec<u8> = vec![97; KEY_SIZE];
+    let key2: Vec<u8> = vec![98; KEY_SIZE];
     println!("{}", std::str::from_utf8(&run.get(&key1).unwrap()).unwrap());
     println!("{}", std::str::from_utf8(&run.get(&key2).unwrap()).unwrap());
-    println!("sizeof {}", ENTRY_SIZE);
+    println!("{:?}", run.get_keys());
 }
