@@ -1,5 +1,3 @@
-#![allow(unstable)]
-
 use crate::buffer;
 use crate::data_type::{EntryT, ValueT, ENTRY_SIZE, TOMBSTONE};
 use crate::level;
@@ -328,7 +326,7 @@ impl LSMTree {
 
         for current_run in 0..self.depth {
             match self.get_run(current_run as usize) {
-                Some(mut r) => {
+                Some(r) => {
                     //start and end are used multiple times which causes "use of moved value"
                     ranges.insert((current_run + 1) as usize, r.range(&start, &end));
                 }
@@ -383,7 +381,7 @@ impl LSMTree {
                     let mut counter = 0;
                     for key in cur_run.get_keys().iter() {
                         //println!("{} set", str::from_utf8(key).unwrap());
-                        if (counter % (page_size::get() / ENTRY_SIZE) as u64 == 0) {
+                        if counter % (page_size::get() / ENTRY_SIZE) as u64 == 0 {
                             cur_run.fence_pointers.push(key.clone());
                         }
                         cur_run.bloom_filter.set(key);
@@ -407,9 +405,9 @@ impl LSMTree {
                 if let Ok(entry) = entry {
                     let path = entry.path();
                     if entry.path().is_dir() {
-                        fs::remove_dir_all(path).expect("fail to remove dir");
+                        fs::remove_dir_all(path);
                     } else {
-                        fs::remove_file(path).expect("fail to remove file");
+                        fs::remove_file(path);
                     }
                 }
             }
