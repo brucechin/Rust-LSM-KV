@@ -1,0 +1,132 @@
+on: [push]
+
+name: Docs & Coverage
+
+jobs:
+
+  rustdoc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Cache stable toolchain
+        uses: actions/cache@v1
+        with:
+          path: ~/.rustup
+          key: ${{ runner.os }}-toolchain-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-toolchain-stable-
+      - name: Cache cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-stable-
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-quiet
+          restore-keys: |
+            ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-target-stable-
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: Run cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps --all --all-features
+
+      - name: Generate artifact slug
+        id: split-path
+        uses: action-util/split-path@v1
+        with:
+          path: ${{ github.repository }}
+
+      - name: Save documentation artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: doc-${{ steps.split-path.outputs.basename }}
+          path: target/doc
+
+      - name: Clean Cargo cache
+        run: |
+          cargo install --force --no-default-features --features ci-autoclean cargo-cache
+          cargo-cache
+
+  tarpaulin:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Cache nightly toolchain
+        uses: actions/cache@v1
+        with:
+          path: ~/.rustup
+          key: ${{ runner.os }}-toolchain-nightly-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-toolchain-nightly-
+      - name: Cache cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-nightly-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-nightly-
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-target-nightly-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-target-nightly-
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - name: Install cargo-tarpaulin
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-tarpaulin -f
+
+      - name: Run tarpaulin
+        uses: actions-rs/cargo@v1
+        with:
+          command: tarpaulin
+          args: |
+            --verbose
+            --run-types Tests Doctests Examples
+            --ignore-panics
+            --out Html Lcov
+            --output-dir coverage/
+
+      - name: Prepare coverage report
+        run: |
+          sudo apt-get install lcov
+          genhtml -o coverage coverage/lcov.info
+
+      - name: Generate artifact slug
+        id: split-path
+        uses: action-util/split-path@v1
+        with:
+          path: ${{ github.repository }}
+
+      - name: Save coverage report artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: coverage-${{ steps.split-path.outputs.basename }}
+          path: coverage/
+
+      - name: Clean Cargo cache
+        run: |
+          cargo install --force --no-default-features --features ci-autoclean cargo-cache
+          cargo-cache

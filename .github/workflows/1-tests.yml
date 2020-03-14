@@ -1,0 +1,63 @@
+on: [push]
+
+name: Tests
+
+jobs:
+
+  tests:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    env:
+      RUSTC_BACKTRACE: full
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Cache stable toolchain
+        uses: actions/cache@v1
+        with:
+          path: ~/.rustup
+          key: ${{ runner.os }}-toolchain-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-toolchain-stable-
+      - name: Cache cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-stable-
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-quiet
+          restore-keys: |
+            ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-target-stable-
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: --allow=warnings
+        with:
+          command: build
+          args: --tests --workspace --all-features
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: --allow=warnings
+        with:
+          command: test
+          args: --workspace --all-features
+
+      - name: Clean Cargo cache
+        run: |
+          cargo install --force --no-default-features --features ci-autoclean cargo-cache
+          cargo-cache
+

@@ -1,0 +1,97 @@
+on: [push]
+
+name: Lints
+
+jobs:
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Cache stable toolchain
+        uses: actions/cache@v1
+        with:
+          path: ~/.rustup
+          key: ${{ runner.os }}-toolchain-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-toolchain-stable-
+      - name: Cache cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-stable-
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-noisy
+          restore-keys: |
+            ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-target-stable-
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: Run cargo clippy
+        uses: actions-rs/clippy-check@v1
+        env:
+          RUSTFLAGS: --deny=warnings
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --package graph --tests --workspace --all-features
+
+      - name: Clean Cargo cache
+        run: |
+          cargo install --force --no-default-features --features ci-autoclean cargo-cache
+          cargo-cache
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Cache stable toolchain
+        uses: actions/cache@v1
+        with:
+          path: ~/.rustup
+          key: ${{ runner.os }}-toolchain-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-toolchain-stable-
+      - name: Cache cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-stable-
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-noisy
+          restore-keys: |
+            ${{ runner.os }}-target-stable-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-target-stable-
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: Run cargo fmt --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Clean Cargo cache
+        run: |
+          cargo install --force --no-default-features --features ci-autoclean cargo-cache
+          cargo-cache
