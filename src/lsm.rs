@@ -246,13 +246,13 @@ impl LSMTree {
             }
             _ => {
                 //not found in buffer, start searching in vector<Level>
-                //println!("key {} not found in buffer", str::from_utf8(&key).unwrap());
+                println!("key {} not found in buffer", str::from_utf8(&key).unwrap());
                 for current_run in 0..self.depth * self.levels.len() as u64 {
                     let current_val: ValueT;
-                    // println!(
-                    //     "search in Run {}, latest_run is {}",
-                    //     current_run, latest_run
-                    // );
+                    println!(
+                        "search in Run {}, latest_run is {}",
+                        current_run, latest_run
+                    );
                     //let mut run: run::Run;
                     if latest_run >= 0 || (self.get_run(current_run as usize).is_none()) {
                         // Stop search if we discovered a key in another run, or
@@ -264,11 +264,11 @@ impl LSMTree {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
                             //search();
-                            // println!(
-                            //     "key {} not found in Run {}",
-                            //     str::from_utf8(&key).unwrap(),
-                            //     current_run
-                            // );
+                            println!(
+                                "key {} not found in Run {}",
+                                str::from_utf8(&key).unwrap(),
+                                current_run
+                            );
                         } else {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need
@@ -345,30 +345,32 @@ impl LSMTree {
             let max_size = self.levels[depth].max_run_size;
             //visit every run and load into LSMTree vec<Level>
             if level_dir.is_dir() {
-                for run_file in fs::read_dir(level_dir)? {
-                    //println!("{?}", run_file);
-                    let run_file_entry = run_file?;
-                    self.levels[depth].runs.push_back(run::Run {
-                        //TODO should load the old bloomfilter data instead of a brand new one.
-                        bloom_filter: bloomfilter::Bloom::new(
-                            (self.bf_bits_per_entry * max_size as f32) as usize,
-                            max_size as usize,
-                        ),
-                        //bloom_filer: bloom_filter::BloomFilter::new_with_size(max_size * bf_bits_per_entry),
-                        fence_pointers: Vec::with_capacity(
-                            (max_size as u64 / page_size::get() as u64) as usize,
-                        ),
-                        max_key: data_type::KeyT::default(),
-                        mapping: None,
-                        mapping_file: None,
-                        size: 0,
-                        max_size: max_size as u64,
-                        level_index: depth,
-                        tmp_file: PathBuf::from(run_file_entry.path()),
-                    });
+                let files = fs::read_dir(level_dir)?;
+                let mut entries: Vec<PathBuf> = files.filter(Result::is_ok)
+                .map(|e| e.unwrap().path())
+                .collect();
+                //make sure we read from Run-0.text to Run-max_runs.txt
+                entries.sort();
+                for run_file in entries {
+                    let run_file_entry = run_file;
+                    println!("cur file path is {:?}", run_file_entry);
+                    let mut cur_run = run::Run::from(
+                        max_size as u64,
+                        self.bf_bits_per_entry,
+                        depth,
+                        run_file_entry,
+                    );
+                    //TODO do we need to have extra operations to connect cur_run and run_file_entry???
+                    //reconstruct the bloom filter for cur_run
+                    for key in cur_run.get_keys().iter() {
+                        cur_run.bloom_filter.set(key);
+                    }
+                    self.levels[depth].runs.push_back(cur_run);
                 }
             }
+            println!("cur level has {} Runs", self.levels[depth].runs.len());
         }
+        
         Ok(())
     }
 
@@ -393,7 +395,6 @@ impl LSMTree {
         for entry_in_buf in self.buffer.entries.iter() {
             self.levels[0].runs[0].put(&entry_in_buf);
         }
-        //TODO save bloom filter data to this file
         self.levels[0].runs[0].unmap();
 
         //buffer already written to levels.front().runs.front(). We can clear it now for inserting new entry.
@@ -409,11 +410,19 @@ fn test_lsm() {
 #[test]
 fn test_merge() {
     let mut lsm = LSMTree::new(8, 5, 8, 0.5, 4, "hello".to_string());
-    for i in 0..1000 {
+    for i in 0..100 {
         lsm.put(&i.to_string(), &i.to_string());
     }
-    for j in 0..1000 {
-        println!("{:?}", lsm.get(&j.to_string()));
+    // for j in 0..100 {
+    //     println!("{:?}", lsm.get(&j.to_string()));
+    // }
+    lsm.close();
+    println!("close done");
+    let mut lsm2 = LSMTree::new(8, 5, 8, 0.5, 4, "hello".to_string());
+    lsm2.load();
+    println!("load done");
+    for j in 0..200 {
+        println!("{:?}", lsm2.get(&j.to_string()));
     }
 }
 
