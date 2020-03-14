@@ -3,7 +3,7 @@ use crate::data_type::EntryT;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 //use std::hash::{Hash, Hasher};
-
+use std::str;
 #[derive(Eq, Debug, Hash, Clone)]
 struct MergeEntry {
     pub precedence: usize,
@@ -34,9 +34,11 @@ impl MergeEntry {
 impl Ord for MergeEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.head() == other.head() {
-            self.precedence.cmp(&other.precedence)
+            other.precedence.cmp(&self.precedence)
+            //self.precedence.cmp(&other.precedence).reverse()
         } else {
-            self.head().cmp(&other.head())
+            other.head().cmp(&self.head())
+            //self.head().cmp(&other.head())
         }
     }
 }
@@ -85,7 +87,7 @@ impl MergeContext {
         //TODO priority_queue return both item and its priority
         let mut next: MergeEntryT;
         let current = self.priority_queue.peek().unwrap().clone();
-
+        //println!("{}", str::from_utf8(&current.head().value).unwrap());
         while !self.priority_queue.is_empty()
             && self.priority_queue.peek().unwrap().head().key == current.head().key
         {
@@ -95,7 +97,18 @@ impl MergeContext {
                 self.priority_queue.push(next);
             }
         }
+        //println!("{}", str::from_utf8(&current.head().value).unwrap());
         current.head()
+    }
+
+    pub fn print(&mut self) {
+        println!("merge ctx print start");
+        for tmp in &self.priority_queue{
+            for entry in tmp.entries.iter() {
+                println!("{}", str::from_utf8(&entry.value).unwrap());
+            }
+        }
+        //println!("{:?}", str::from_utf8(&self.priority_queue.peek().unwrap().entries[0].value));
     }
 
     pub fn done(&self) -> bool {
