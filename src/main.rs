@@ -1,9 +1,8 @@
 use getopts::Options;
-use lsm_kv::data_type::EntryT;
+use lsm_kv::data_type::{EntryT, ENTRY_SIZE};
 use lsm_kv::lsm;
 use lsm_kv::lsm::LSMTree;
 use std::io::BufRead;
-use std::mem::size_of;
 use std::{env, io};
 
 fn command_loop(lsm_tree: &mut LSMTree, input: impl BufRead) {
@@ -97,8 +96,7 @@ fn main() {
         bf_bits_per_entry = matches.opt_str("r").unwrap().parse().unwrap()
     }
 
-    let buffer_max_entries =
-        buffer_num_pages * page_size::get() as u64 / size_of::<EntryT>() as u64;
+    let buffer_max_entries = buffer_num_pages * page_size::get() as u64 / ENTRY_SIZE as u64;
 
     let mut lsm_tree = LSMTree::new(
         buffer_max_entries,

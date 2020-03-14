@@ -1,4 +1,4 @@
-use crate::data_type::{EntryT, KeyT, ValueT, KEY_SIZE, VALUE_SIZE};
+use crate::data_type::{EntryT, KeyT, ValueT, ENTRY_SIZE, KEY_SIZE, VALUE_SIZE};
 use libc;
 use memmap::{Mmap, MmapMut, MmapOptions};
 use mktemp::Temp;
@@ -10,7 +10,6 @@ use std::ops::DerefMut;
 //use std::collections::linked_list::Iter;
 use std::ffi::CString;
 use std::fs::{File, OpenOptions};
-use std::mem::size_of;
 use std::os::raw;
 use std::os::raw::c_void;
 use std::os::unix::prelude::*;
@@ -73,7 +72,7 @@ impl Run {
     }
 
     pub fn map_read_default(&mut self) -> Vec<EntryT> {
-        self.map_read(size_of::<EntryT>() * self.max_size as usize, 0)
+        self.map_read(ENTRY_SIZE * self.max_size as usize, 0)
     }
 
     pub fn map_read(&mut self, len: usize, offset: usize) -> Vec<EntryT> {
@@ -98,8 +97,8 @@ impl Run {
                 Ok(mmap) => {
                     self.mapping = Some(mmap.make_mut().unwrap());
                     let mut res: Vec<EntryT> = Vec::new();
-                    for i in 0..len / size_of::<EntryT>() {
-                        let offset = size_of::<EntryT>() * i as usize;
+                    for i in 0..len / ENTRY_SIZE {
+                        let offset = ENTRY_SIZE * i as usize;
                         res.push(EntryT {
                             key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE]
                                 .to_vec(),
@@ -131,7 +130,7 @@ impl Run {
             Err(e) => panic!("Open temp file failed because {}!", e),
         };
 
-        let len = size_of::<EntryT>() * self.max_size as usize;
+        let len = ENTRY_SIZE * self.max_size as usize;
 
         let mut fill: Vec<u8> = vec![32; len as usize];
         fill.push(10);
@@ -175,8 +174,8 @@ impl Run {
             self.map_read(page_size::get(), page_index * page_size::get());
 
             let mut val: ValueT = vec![];
-            for i in 0..page_size::get() / size_of::<EntryT>() {
-                let offset = size_of::<EntryT>() * i as usize;
+            for i in 0..page_size::get() / ENTRY_SIZE {
+                let offset = ENTRY_SIZE * i as usize;
                 if self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec()
                     == *key
                 {
@@ -236,11 +235,11 @@ impl Run {
         let num_pages = page_end - page_start;
         self.map_read(num_pages * page_size::get(), page_start * page_size::get());
 
-        let num_entries = num_pages * page_size::get() / size_of::<EntryT>();
+        let num_entries = num_pages * page_size::get() / ENTRY_SIZE;
         res.reserve(num_entries);
 
         for i in 0..num_entries {
-            let offset = size_of::<EntryT>() * i as usize;
+            let offset = ENTRY_SIZE * i as usize;
             let entry = EntryT {
                 key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec(),
                 value: self.mapping.as_ref().unwrap().as_ref()
@@ -260,7 +259,7 @@ impl Run {
     pub fn put(&mut self, entry: &EntryT) {
         assert!(self.size < self.max_size);
 
-        if self.size % (page_size::get() / size_of::<EntryT>()) as u64 == 0 {
+        if self.size % (page_size::get() / ENTRY_SIZE) as u64 == 0 {
             self.fence_pointers.push(entry.key.clone());
         }
 
@@ -270,7 +269,7 @@ impl Run {
         entry_data.extend(entry.key.iter());
         entry_data.extend(entry.value.iter());
 
-        let mut offset = size_of::<EntryT>() * self.size as usize;
+        let mut offset = ENTRY_SIZE * self.size as usize;
         for byte in entry_data {
             self.mapping.as_mut().unwrap().as_mut()[offset] = byte;
             offset += 1;
@@ -309,4 +308,5 @@ fn run_test() {
     let key2: Vec<u8> = vec![98; 8];
     println!("{}", std::str::from_utf8(&run.get(&key1).unwrap()).unwrap());
     println!("{}", std::str::from_utf8(&run.get(&key2).unwrap()).unwrap());
+    println!("sizeof {}", ENTRY_SIZE);
 }

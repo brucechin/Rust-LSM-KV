@@ -8,8 +8,9 @@ pub type KeyT = Vec<u8>;
 pub type ValueT = Vec<u8>;
 
 pub static KEY_SIZE: usize = 8;
-pub static FILENAME_SIZE: usize = 32;
 pub static VALUE_SIZE: usize = 24;
+pub static ENTRY_SIZE: usize = 32;
+pub static FILENAME_SIZE: usize = 32;
 pub static TOMBSTONE: &str = "TOMBSTONE";
 #[derive(Eq, Default, Debug, Clone, Hash)]
 pub struct Entry {
