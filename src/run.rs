@@ -132,7 +132,8 @@ impl Run {
 
         let len = size_of::<EntryT>() * self.max_size as usize;
 
-        let fill: Vec<u8> = vec![32; len as usize];
+        let mut fill: Vec<u8> = vec![32; len as usize];
+        fill.push(10);
         self.mapping_file.as_ref().unwrap().write_all(fill.as_ref());
 
         unsafe {

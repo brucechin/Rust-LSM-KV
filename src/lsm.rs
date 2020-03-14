@@ -400,6 +400,9 @@ fn test_merge() {
     for i in 0..1000 {
         lsm.put(&i.to_string(), &i.to_string());
     }
+    for j in 0..1000 {
+        println!("{:?}", lsm.get(&j.to_string()));
+    }
 }
 
 #[test]
