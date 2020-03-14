@@ -96,11 +96,12 @@ impl LSMTree {
         }
     }
 
-    pub fn get_run(&self, run_id: usize) -> Option<run::Run> {
+    pub fn get_run(&self, run_id: usize) -> Option<&run::Run> {
         let mut index = run_id;
         for level in self.levels.iter() {
             if run_id < level.runs.len() {
-                level.runs.get(index).unwrap();
+                //println!("get run {}", run_id);
+                return Some(level.runs.get(run_id).unwrap());
             } else {
                 index -= level.runs.len();
             }
@@ -154,8 +155,11 @@ impl LSMTree {
         ));
         //start writing back this compacted run in next level to a new file on disk
         self.levels[next].runs[0].map_write();
+        //merge_ctx.print();
         while !merge_ctx.done() {
             entry = merge_ctx.next();
+            //TODO merge_ctx.next() return a wrong value.
+            //println!("{}", str::from_utf8(&entry.value).unwrap());
             if !(next == self.levels.len() - 1 && entry.value == TOMBSTONE.as_bytes().to_vec()) {
                 self.levels[next].runs[0].put(&entry);
             }
@@ -195,7 +199,7 @@ impl LSMTree {
              * If the buffer is full, flush level 0 if necessary
              * to create space
              */
-
+            //println!("start merge");
             self.merge_down(0);
 
             /*
@@ -243,9 +247,10 @@ impl LSMTree {
             }
             _ => {
                 //not found in buffer, start searching in vector<Level>
-
-                for current_run in 0..self.depth {
+                println!("key {} not found in buffer", str::from_utf8(&key).unwrap());
+                for current_run in 0..self.depth * self.levels.len() as u64  {
                     let current_val: ValueT;
+                    println!("search in Run {}, latest_run is {}", current_run, latest_run);
                     //let mut run: run::Run;
                     if latest_run >= 0 || (self.get_run(current_run as usize).is_none()) {
                         // Stop search if we discovered a key in another run, or
@@ -257,6 +262,7 @@ impl LSMTree {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
                             //search();
+                            println!("key {} not found in Run {}", str::from_utf8(&key).unwrap(), current_run);
                         } else {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need
@@ -400,9 +406,9 @@ fn test_merge() {
     for i in 0..1000 {
         lsm.put(&i.to_string(), &i.to_string());
     }
-    for j in 0..1000 {
-        println!("{:?}", lsm.get(&j.to_string()));
-    }
+    // for j in 0..100 {
+    //     println!("{:?}", lsm.get(&j.to_string()));
+    // }
 }
 
 #[test]
