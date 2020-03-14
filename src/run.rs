@@ -15,6 +15,7 @@ use std::os::raw;
 use std::os::raw::c_void;
 use std::os::unix::prelude::*;
 use std::path::PathBuf;
+use std::str;
 
 pub struct Run {
     pub bloom_filter: bloomfilter::Bloom<KeyT>,
