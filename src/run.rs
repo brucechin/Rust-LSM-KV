@@ -160,9 +160,16 @@ impl Run {
             if *key < self.fence_pointers[0] || *key > self.max_key {
                 return None;
             }
-            let next_page = self.fence_pointers.binary_search(key).unwrap();
-            assert!(next_page >= 1);
-            let page_index = next_page - 1;
+            let page_index: usize;
+            match self.fence_pointers.binary_search(key) {
+                Ok(find) => {
+                    page_index = find;
+                }
+                Err(not) => {
+                    page_index = not - 1;
+                }
+            }
+            assert!(page_index >= 0);
 
             self.map_read(page_size::get(), page_index * page_size::get());
 
@@ -203,13 +210,27 @@ impl Run {
         if *start < self.fence_pointers[0] {
             page_start = 0;
         } else {
-            page_start = self.fence_pointers.binary_search(start).unwrap() - 1;
+            match self.fence_pointers.binary_search(start) {
+                Ok(find) => {
+                    page_start = find;
+                }
+                Err(not) => {
+                    page_start = not - 1;
+                }
+            }
         }
 
         if *end > self.max_key {
             page_end = 0;
         } else {
-            page_end = self.fence_pointers.binary_search(end).unwrap() - 1;
+            match self.fence_pointers.binary_search(end) {
+                Ok(find) => {
+                    page_end = find;
+                }
+                Err(not) => {
+                    page_end = not - 1;
+                }
+            }
         }
 
         assert!(page_start < page_end);
@@ -295,5 +316,24 @@ fn map_test() {
 #[test]
 fn run_test() {
     use crate::run;
-    let run = run::Run::new(10, 0.5, "unit_test", 0, 0);
+    use std::fs;
+    fs::create_dir("/tmp/unit_test");
+    fs::create_dir("/tmp/unit_test/0");
+    let mut run = run::Run::new(10, 0.5, "unit_test", 0, 0);
+    let entry1 = EntryT {
+        key: vec![97; 8],
+        value: vec![98; 32],
+    };
+    let entry2 = EntryT {
+        key: vec![98; 8],
+        value: vec![99; 32],
+    };
+    run.map_write();
+    run.put(&entry1);
+    run.put(&entry2);
+    run.unmap();
+    let key1: Vec<u8> = vec![97; 8];
+    let key2: Vec<u8> = vec![98; 8];
+    println!("{}", std::str::from_utf8(&run.get(&key1).unwrap()).unwrap());
+    println!("{}", std::str::from_utf8(&run.get(&key2).unwrap()).unwrap());
 }
