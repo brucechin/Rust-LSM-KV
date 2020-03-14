@@ -71,12 +71,8 @@ impl Run {
         }
     }
 
-    pub fn from(max_size: u64,
-        bf_bits_per_entry: f32,
-        level: usize,
-        file_path : PathBuf,
-    ) -> Run{
-            Run {
+    pub fn from(max_size: u64, bf_bits_per_entry: f32, level: usize, file_path: PathBuf) -> Run {
+        Run {
             bloom_filter: bloomfilter::Bloom::new(
                 (bf_bits_per_entry * max_size as f32) as usize,
                 max_size as usize,
@@ -98,7 +94,7 @@ impl Run {
     }
 
     pub fn map_read(&mut self, len: usize, offset: usize) -> Vec<EntryT> {
-        assert!(self.mapping.is_none());
+        //assert!(self.mapping.is_none());
 
         match OpenOptions::new()
             .read(true)
@@ -183,6 +179,7 @@ impl Run {
                 return None;
             }
             let page_index: usize;
+
             match self.fence_pointers.binary_search(key) {
                 Ok(find) => {
                     page_index = find;
