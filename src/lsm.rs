@@ -96,12 +96,12 @@ impl LSMTree {
         }
     }
 
-    pub fn get_run(&self, run_id: usize) -> Option<&run::Run> {
+    pub fn get_run(&mut self, run_id: usize) -> Option<&mut run::Run> {
         let mut index = run_id;
-        for level in self.levels.iter() {
+        for level in &mut self.levels {
             if run_id < level.runs.len() {
                 //println!("get run {}", run_id);
-                return Some(level.runs.get(run_id).unwrap());
+                return level.runs.get_mut(run_id);
             } else {
                 index -= level.runs.len();
             }
@@ -228,7 +228,7 @@ impl LSMTree {
         }
     }
 
-    pub fn get(&self, key_str: &str) -> Option<String> {
+    pub fn get(&mut self, key_str: &str) -> Option<String> {
         let key = self.fill_str_with_witespace(key_str, data_type::KEY_SIZE);
         let res: String;
         //read from buffer first. then from level 0 to max_level. return first match entry.
@@ -248,21 +248,28 @@ impl LSMTree {
             _ => {
                 //not found in buffer, start searching in vector<Level>
                 println!("key {} not found in buffer", str::from_utf8(&key).unwrap());
-                for current_run in 0..self.depth * self.levels.len() as u64  {
+                for current_run in 0..self.depth * self.levels.len() as u64 {
                     let current_val: ValueT;
-                    println!("search in Run {}, latest_run is {}", current_run, latest_run);
+                    println!(
+                        "search in Run {}, latest_run is {}",
+                        current_run, latest_run
+                    );
                     //let mut run: run::Run;
                     if latest_run >= 0 || (self.get_run(current_run as usize).is_none()) {
                         // Stop search if we discovered a key in another run, or
                         // if there are no more runs to search
                         break;
                     } else {
-                        let mut run = self.get_run(current_run as usize).unwrap();
+                        let run = self.get_run(current_run as usize).unwrap();
                         if run.get(&key).is_none() {
                             // Couldn't find the key in the current run, so we need
                             // to keep searching.
                             //search();
-                            println!("key {} not found in Run {}", str::from_utf8(&key).unwrap(), current_run);
+                            println!(
+                                "key {} not found in Run {}",
+                                str::from_utf8(&key).unwrap(),
+                                current_run
+                            );
                         } else {
                             // Update val if the run is more recent than the
                             // last, then stop searching since there's no need
@@ -288,7 +295,7 @@ impl LSMTree {
         None
     }
 
-    pub fn range(&self, start_str: &str, end_str: &str) -> Vec<String> {
+    pub fn range(&mut self, start_str: &str, end_str: &str) -> Vec<String> {
         let start = self.fill_str_with_witespace(start_str, data_type::KEY_SIZE);
         let end = self.fill_str_with_witespace(end_str, data_type::KEY_SIZE);
         let mut buffer_range: Vec<String> = Vec::new(); //this is return value list
@@ -406,9 +413,9 @@ fn test_merge() {
     for i in 0..1000 {
         lsm.put(&i.to_string(), &i.to_string());
     }
-    // for j in 0..100 {
-    //     println!("{:?}", lsm.get(&j.to_string()));
-    // }
+    for j in 0..100 {
+        println!("{:?}", lsm.get(&j.to_string()));
+    }
 }
 
 #[test]

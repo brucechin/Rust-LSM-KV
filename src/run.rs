@@ -174,16 +174,14 @@ impl Run {
             self.map_read(page_size::get(), page_index * page_size::get());
 
             let mut val: ValueT = vec![];
-            unsafe {
-                for i in 0..page_size::get() / size_of::<EntryT>() {
-                    let offset = size_of::<EntryT>() * i as usize;
-                    if self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec()
-                        == *key
-                    {
-                        val = self.mapping.as_ref().unwrap().as_ref()
-                            [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
-                            .to_vec();
-                    }
+            for i in 0..page_size::get() / size_of::<EntryT>() {
+                let offset = size_of::<EntryT>() * i as usize;
+                if self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec()
+                    == *key
+                {
+                    val = self.mapping.as_ref().unwrap().as_ref()
+                        [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
+                        .to_vec();
                 }
             }
 
@@ -240,19 +238,16 @@ impl Run {
         let num_entries = num_pages * page_size::get() / size_of::<EntryT>();
         res.reserve(num_entries);
 
-        unsafe {
-            for i in 0..num_entries {
-                let offset = size_of::<EntryT>() * i as usize;
-                let entry = EntryT {
-                    key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE]
-                        .to_vec(),
-                    value: self.mapping.as_ref().unwrap().as_ref()
-                        [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
-                        .to_vec(),
-                };
-                if *start <= entry.key && entry.key <= *end {
-                    res.push(entry);
-                }
+        for i in 0..num_entries {
+            let offset = size_of::<EntryT>() * i as usize;
+            let entry = EntryT {
+                key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec(),
+                value: self.mapping.as_ref().unwrap().as_ref()
+                    [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
+                    .to_vec(),
+            };
+            if *start <= entry.key && entry.key <= *end {
+                res.push(entry);
             }
         }
 
@@ -274,13 +269,12 @@ impl Run {
         entry_data.extend(entry.key.iter());
         entry_data.extend(entry.value.iter());
 
-        unsafe {
-            let mut offset = size_of::<EntryT>() * self.size as usize;
-            for byte in entry_data {
-                self.mapping.as_mut().unwrap().as_mut()[offset] = byte;
-                offset += 1;
-            }
+        let mut offset = size_of::<EntryT>() * self.size as usize;
+        for byte in entry_data {
+            self.mapping.as_mut().unwrap().as_mut()[offset] = byte;
+            offset += 1;
         }
+
         //set true for this key in this Run. For later more efficient search and avoid unnecessary file I/O operations.
         self.bloom_filter.set(&entry.key);
         self.size += 1;
@@ -289,28 +283,6 @@ impl Run {
     // fn file_size(&self) -> u64 {
     //     self.max_size * size_of::<EntryT>() as u64
     // }
-}
-
-#[test]
-fn map_test() {
-    use memmap::Mmap;
-    use std::io::Write;
-    use std::ops::DerefMut;
-
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open("./test.txt")
-        .unwrap();
-    let fill: Vec<u8> = vec![32; 30];
-    file.write_all(fill.as_ref());
-
-    let mmap = unsafe { Mmap::map(&file).unwrap() };
-    let mut mut_mmap = mmap.make_mut().unwrap();
-    let fill: Vec<u8> = vec![32, 15 as u8];
-    mut_mmap.deref_mut().write_all(b"hello, world!");
 }
 
 #[test]
