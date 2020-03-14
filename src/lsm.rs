@@ -4,7 +4,7 @@ use crate::level;
 use crate::merge;
 use crate::run;
 use rand::Rng;
-use std::io;
+use std::{io, thread};
 //use bit_vec::Iter;
 //use rand::distributions::weighted::WeightedError::TooMany;
 //use std::borrow::Borrow;
@@ -485,3 +485,22 @@ fn test_clear() {
         assert_eq!(None, lsm.get(&j.to_string()));
     }
 }
+
+// #[test]
+// fn test_multithreading() {
+//     let num_threads = 10;
+//     let test_size = 1000;
+//     let mut lsm = LSMTree::new(8, 5, 8, 0.5, 4, "clear_test".to_string());
+//     for i in 0..test_size {
+//         lsm.put(&i.to_string(), &i.to_string());
+//     }
+//
+//         let handle = thread:spawn(|| {
+//             for i in 0..10 {
+//                 assert_eq!(Some(i.to_string()), lsm.get(&i.to_string()));
+//             }
+//         });
+//         handle.join().unwrap();
+//
+//
+// }

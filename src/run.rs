@@ -13,6 +13,7 @@ use std::os::raw::c_void;
 use std::os::unix::prelude::*;
 use std::path::PathBuf;
 use std::str;
+use std::sync::RwLock;
 
 pub struct Run {
     pub bloom_filter: bloomfilter::Bloom<KeyT>,
@@ -25,6 +26,7 @@ pub struct Run {
     pub max_size: u64,
     pub tmp_file: PathBuf,
     pub level_index: usize,
+    pub read_write_lock: RwLock<usize>,
 }
 
 impl Run {
@@ -66,6 +68,7 @@ impl Run {
             max_size: max_size,
             level_index: level,
             tmp_file: PathBuf::from(format!(r"/tmp/{}/{}/run_file-{}.txt", lsm_name, level, id)),
+            read_write_lock: RwLock::new(0),
         }
     }
 
@@ -84,6 +87,7 @@ impl Run {
             max_size: max_size,
             level_index: level,
             tmp_file: file_path,
+            read_write_lock: RwLock::new(0),
         }
     }
 
@@ -171,6 +175,7 @@ impl Run {
 
     pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
         //bloom_filter
+        let read_lock = self.read_write_lock.read().unwrap().clone();
         if self.bloom_filter.check(key) {
             //it is very likely that this Run contains target entry. False positives may occur.
             if *key < self.fence_pointers[0] || *key > self.max_key {
@@ -227,6 +232,7 @@ impl Run {
     }
 
     pub fn range(&mut self, start: &KeyT, end: &KeyT) -> Vec<EntryT> {
+        let read_lock = self.read_write_lock.read().unwrap().clone();
         let mut res: Vec<EntryT> = Vec::new();
 
         let page_start: usize;
@@ -289,7 +295,7 @@ impl Run {
 
     pub fn put(&mut self, entry: &EntryT) {
         assert!(self.size < self.max_size);
-
+        let mut write_lock = self.read_write_lock.write().unwrap();
         if self.size % (page_size::get() / ENTRY_SIZE) as u64 == 0 {
             self.fence_pointers.push(entry.key.clone());
         }
@@ -317,7 +323,7 @@ impl Run {
 }
 
 #[test]
-fn run_test() {
+fn test_run() {
     use crate::run;
     use std::fs;
     fs::create_dir("/tmp/unit_test");
@@ -340,4 +346,9 @@ fn run_test() {
     println!("{}", std::str::from_utf8(&run.get(&key1).unwrap()).unwrap());
     println!("{}", std::str::from_utf8(&run.get(&key2).unwrap()).unwrap());
     println!("{:?}", run.get_keys());
+}
+
+#[test]
+fn test_multithreading() {
+    println!("test multi threading!");
 }
