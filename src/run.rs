@@ -1,10 +1,14 @@
 use crate::data_type::{EntryT, KeyT, ValueT, KEY_SIZE, VALUE_SIZE};
 use libc;
+use memmap::{Mmap, MmapMut, MmapOptions};
 use mktemp::Temp;
 use mmap::{MapOption, MemoryMap};
 use page_size;
 use std::cmp::max;
+use std::io::prelude::*;
+use std::ops::DerefMut;
 //use std::collections::linked_list::Iter;
+use std::ffi::CString;
 use std::fs::{File, OpenOptions};
 use std::mem::size_of;
 use std::os::raw;
@@ -17,8 +21,8 @@ pub struct Run {
     //bloom_filer: bloom_filter::BloomFilter,
     pub fence_pointers: Vec<KeyT>,
     pub max_key: KeyT,
-    pub mapping: Option<MemoryMap>,
-    pub mapping_fd: raw::c_int,
+    pub mapping: Option<MmapMut>,
+    pub mapping_file: Option<File>,
     pub size: u64,
     pub max_size: u64,
     pub tmp_file: PathBuf,
@@ -59,7 +63,7 @@ impl Run {
             fence_pointers: Vec::with_capacity((max_size / page_size::get() as u64) as usize),
             max_key: KeyT::default(),
             mapping: None,
-            mapping_fd: -1,
+            mapping_file: None,
             size: 0,
             max_size: max_size,
             level_index: level,
@@ -74,49 +78,39 @@ impl Run {
     pub fn map_read(&mut self, len: usize, offset: usize) -> Vec<EntryT> {
         assert!(self.mapping.is_none());
 
-        match File::open(self.tmp_file.as_path()) {
-            Ok(fd) => {
-                self.mapping_fd = fd.as_raw_fd();
+        match OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(self.tmp_file.as_path())
+        {
+            Ok(file) => {
+                self.mapping_file = Some(file);
             }
             Err(_) => panic!("Open temp file failed!"),
         };
-        match MemoryMap::new(
-            len,
-            &[
-                MapOption::MapReadable,
-                MapOption::MapFd(self.mapping_fd),
-                MapOption::MapOffset(offset),
-                MapOption::MapNonStandardFlags(0x01),
-            ],
-        ) {
-            Ok(map) => unsafe {
-                self.mapping = Some(map);
-                let mut res: Vec<EntryT> = Vec::new();
-                for i in 0..self.size {
-                    res.push(EntryT {
-                        key: std::slice::from_raw_parts(
-                            self.mapping
-                                .as_ref()
-                                .unwrap()
-                                .data()
-                                .add(size_of::<EntryT>() * i as usize),
-                            KEY_SIZE,
-                        )
-                        .to_vec(),
-                        value: std::slice::from_raw_parts(
-                            self.mapping
-                                .as_ref()
-                                .unwrap()
-                                .data()
-                                .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
-                            VALUE_SIZE,
-                        )
-                        .to_vec(),
-                    })
+        unsafe {
+            match MmapOptions::new()
+                .len(len)
+                .offset(offset as u64)
+                .map(self.mapping_file.as_ref().unwrap())
+            {
+                Ok(mmap) => {
+                    self.mapping = Some(mmap.make_mut().unwrap());
+                    let mut res: Vec<EntryT> = Vec::new();
+                    for i in 0..self.size {
+                        let offset = size_of::<EntryT>() * i as usize;
+                        res.push(EntryT {
+                            key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE]
+                                .to_vec(),
+                            value: self.mapping.as_ref().unwrap().as_ref()
+                                [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
+                                .to_vec(),
+                        })
+                    }
+                    res
                 }
-                res
-            },
-            Err(_) => panic!("Mapping failed!"),
+                Err(_) => panic!("Mapping failed!"),
+            }
         }
     }
 
@@ -130,32 +124,24 @@ impl Run {
             .truncate(true)
             .open(self.tmp_file.as_path())
         {
-            Ok(fd) => {
-                self.mapping_fd = fd.as_raw_fd();
+            Ok(file) => {
+                self.mapping_file = Some(file);
             }
             Err(e) => panic!("Open temp file failed because {}!", e),
         };
 
         let len = size_of::<EntryT>() * self.max_size as usize;
 
-        unsafe {
-            assert!(libc::lseek(self.mapping_fd, (len - 1) as i64, 0) != -1);
-            assert!(libc::write(self.mapping_fd, "".as_ptr() as *const c_void, 1) != -1);
-        }
+        let fill: Vec<u8> = vec![32; len as usize];
+        self.mapping_file.as_ref().unwrap().write_all(fill.as_ref());
 
-        match MemoryMap::new(
-            len,
-            &[
-                MapOption::MapWritable,
-                MapOption::MapFd(self.mapping_fd),
-                MapOption::MapOffset(0),
-                MapOption::MapNonStandardFlags(0x01),
-            ],
-        ) {
-            Ok(map) => {
-                self.mapping = Some(map);
+        unsafe {
+            match Mmap::map(self.mapping_file.as_ref().unwrap()) {
+                Ok(mmap) => {
+                    self.mapping = Some(mmap.make_mut().unwrap());
+                }
+                Err(e) => panic!("Mapping failed because {}", e),
             }
-            Err(e) => panic!("Mapping failed because {}", e),
         }
     }
 
@@ -163,10 +149,7 @@ impl Run {
         assert!(self.mapping.is_some());
 
         self.mapping = None;
-        unsafe {
-            libc::close(self.mapping_fd);
-        }
-        self.mapping_fd = -1;
+        self.mapping_file = None;
     }
 
     pub fn get(&mut self, key: &KeyT) -> Option<ValueT> {
@@ -185,26 +168,13 @@ impl Run {
             let mut val: ValueT = vec![];
             unsafe {
                 for i in 0..page_size::get() / size_of::<EntryT>() {
-                    if std::slice::from_raw_parts(
-                        self.mapping
-                            .as_ref()
-                            .unwrap()
-                            .data()
-                            .add(size_of::<EntryT>() * i as usize),
-                        KEY_SIZE,
-                    )
-                    .to_vec()
+                    let offset = size_of::<EntryT>() * i as usize;
+                    if self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE].to_vec()
                         == *key
                     {
-                        val = std::slice::from_raw_parts(
-                            self.mapping
-                                .as_ref()
-                                .unwrap()
-                                .data()
-                                .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
-                            VALUE_SIZE,
-                        )
-                        .to_vec()
+                        val = self.mapping.as_ref().unwrap().as_ref()
+                            [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
+                            .to_vec();
                     }
                 }
             }
@@ -250,25 +220,13 @@ impl Run {
 
         unsafe {
             for i in 0..num_entries {
+                let offset = size_of::<EntryT>() * i as usize;
                 let entry = EntryT {
-                    key: std::slice::from_raw_parts(
-                        self.mapping
-                            .as_ref()
-                            .unwrap()
-                            .data()
-                            .add(size_of::<EntryT>() * i as usize),
-                        KEY_SIZE,
-                    )
-                    .to_vec(),
-                    value: std::slice::from_raw_parts(
-                        self.mapping
-                            .as_ref()
-                            .unwrap()
-                            .data()
-                            .add(size_of::<EntryT>() * i as usize + KEY_SIZE),
-                        VALUE_SIZE,
-                    )
-                    .to_vec(),
+                    key: self.mapping.as_ref().unwrap().as_ref()[offset..offset + KEY_SIZE]
+                        .to_vec(),
+                    value: self.mapping.as_ref().unwrap().as_ref()
+                        [offset + KEY_SIZE..offset + KEY_SIZE + VALUE_SIZE]
+                        .to_vec(),
                 };
                 if *start <= entry.key && entry.key <= *end {
                     res.push(entry);
@@ -295,15 +253,10 @@ impl Run {
         entry_data.extend(entry.value.iter());
 
         unsafe {
+            let mut offset = size_of::<EntryT>() * self.size as usize;
             for byte in entry_data {
-                std::ptr::write(
-                    self.mapping
-                        .as_ref()
-                        .unwrap()
-                        .data()
-                        .add(size_of::<EntryT>() * self.size as usize),
-                    byte,
-                );
+                self.mapping.as_mut().unwrap().as_mut()[offset] = byte;
+                offset += 1;
             }
         }
         //set true for this key in this Run. For later more efficient search and avoid unnecessary file I/O operations.
@@ -313,4 +266,26 @@ impl Run {
     // fn file_size(&self) -> u64 {
     //     self.max_size * size_of::<EntryT>() as u64
     // }
+}
+
+#[test]
+fn map_test() {
+    use memmap::Mmap;
+    use std::io::Write;
+    use std::ops::DerefMut;
+
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open("./test.txt")
+        .unwrap();
+    let fill: Vec<u8> = vec![32; 30];
+    file.write_all(fill.as_ref());
+
+    let mmap = unsafe { Mmap::map(&file).unwrap() };
+    let mut mut_mmap = mmap.make_mut().unwrap();
+    let fill: Vec<u8> = vec![32, 15 as u8];
+    mut_mmap.deref_mut().write_all(b"hello, world!");
 }

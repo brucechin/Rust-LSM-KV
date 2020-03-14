@@ -348,7 +348,7 @@ impl LSMTree {
                         ),
                         max_key: data_type::KeyT::default(),
                         mapping: None,
-                        mapping_fd: -1,
+                        mapping_file: None,
                         size: 0,
                         max_size: max_size as u64,
                         level_index: depth,
