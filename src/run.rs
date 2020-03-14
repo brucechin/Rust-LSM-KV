@@ -262,6 +262,7 @@ impl Run {
         }
         //set true for this key in this Run. For later more efficient search and avoid unnecessary file I/O operations.
         self.bloom_filter.set(&entry.key);
+        self.size += 1;
     }
 
     // fn file_size(&self) -> u64 {
@@ -289,4 +290,10 @@ fn map_test() {
     let mut mut_mmap = mmap.make_mut().unwrap();
     let fill: Vec<u8> = vec![32, 15 as u8];
     mut_mmap.deref_mut().write_all(b"hello, world!");
+}
+
+#[test]
+fn run_test() {
+    use crate::run;
+    let run = run::Run::new(10, 0.5, "unit_test", 0, 0);
 }
