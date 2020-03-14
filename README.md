@@ -10,13 +10,16 @@ implement a Log-Structured Merge tree based key-value store in Rust language. ac
 
 [LSM tree](https://en.wikipedia.org/wiki/Log-structured_merge-tree)
 
-    1. pub fn new(buf_max_entries: u64, dep: u64, fanout: u64, bf_bits_per_entry: f32, num_threads: u64, tree_name:  &str) -> LSMTree
-    2. pub fn put(&mut self, key_str: &str, value_str: &str) -> bool
-    3. pub fn get(&self, key_str: &str) -> Option<String>
-    4. pub fn range(&self, start_str: &str, end_str: &str) -> Vec<String>
-    5. pub fn del(&mut self, key_str: &str)
-    6. pub fn close(&mut self)
-    7. pub fn open(&mut self, filename: &str)
+```rust
+    pub fn new(buf_max_entries: u64, dep: u64, fanout: u64, bf_bits_per_entry: f32, num_threads: u64, tree_name:  &str) -> LSMTree;
+    pub fn put(&mut self, key_str: &str, value_str: &str) -> bool;
+    pub fn get(&self, key_str: &str) -> Option<String>;
+    pub fn range(&self, start_str: &str, end_str: &str) -> Vec<String>;
+    pub fn del(&mut self, key_str: &str);
+    pub fn close(&mut self);
+    pub fn open(&mut self, filename: &str);
+```
+
 
 
 
