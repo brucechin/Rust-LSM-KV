@@ -15,7 +15,7 @@ use std::os::raw;
 use std::os::raw::c_void;
 use std::os::unix::prelude::*;
 use std::path::PathBuf;
-
+use std::str;
 pub struct Run {
     pub bloom_filter: bloomfilter::Bloom<KeyT>,
     //bloom_filer: bloom_filter::BloomFilter,
@@ -190,7 +190,7 @@ impl Run {
             Some(val)
         } else {
             //not in this run according to bloom filter
-            println!("not in this Run according to bloom filter");
+            println!("{} not in this Run according to bloom filter", str::from_utf8(&key).unwrap());
             None
         }
     }

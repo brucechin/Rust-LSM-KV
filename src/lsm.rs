@@ -96,14 +96,14 @@ impl LSMTree {
         }
     }
 
-    pub fn get_run(&mut self, run_id: usize) -> Option<&mut run::Run> {
-        let mut index = run_id;
+    pub fn get_run(&mut self, mut run_id: usize) -> Option<&mut run::Run> {
         for level in &mut self.levels {
             if run_id < level.runs.len() {
                 //println!("get run {}", run_id);
                 return level.runs.get_mut(run_id);
             } else {
-                index -= level.runs.len();
+                //println!("index : {} cur level len : {}", run_id, level.runs.len());
+                run_id -= level.runs.len();
             }
         }
         None
