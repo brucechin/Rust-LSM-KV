@@ -3,7 +3,7 @@ use crate::data_type::{EntryT, ValueT, ENTRY_SIZE, TOMBSTONE};
 use crate::level;
 use crate::merge;
 use crate::run;
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use std::{io, thread};
 //use bit_vec::Iter;
 //use rand::distributions::weighted::WeightedError::TooMany;
@@ -12,9 +12,12 @@ use std::collections::HashMap;
 //use std::ptr::null;
 //use std::sync::{Arc, Mutex};
 use crate::data_type;
+use rand::distributions::UnitSphereSurface;
 use std::cmp::max;
 use std::fs::read_dir;
+use std::iter::Inspect;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 use std::{fs, str};
 
 pub static DEFAULT_TREE_DEPTH: u64 = 5;
@@ -191,9 +194,8 @@ impl LSMTree {
 
     fn fill_str_with_witespace(&self, input: &str, length: usize) -> Vec<u8> {
         let mut res = vec![' ' as u8; length - input.len()];
-        let res2: Vec<u8> = input.as_bytes().to_vec();
-        res.extend(res2);
-        assert_eq!(res.len(), length);
+        res.extend(input.as_bytes().to_vec());
+        //assert_eq!(res.len(), length);
         res
     }
 
@@ -484,6 +486,51 @@ fn test_clear() {
     for j in 0..test_size {
         assert_eq!(None, lsm.get(&j.to_string()));
     }
+}
+
+#[test]
+fn bench_put() {
+    let test_size = 100000;
+    let mut rng = thread_rng();
+    let mut data = Vec::new();
+    for i in 0..test_size {
+        let key = rng.gen_range(1, 100000);
+        data.push(key.to_string());
+    }
+
+    let mut lsm = LSMTree::new(100000, 5, 10, 0.5, 4, "bench_put".to_string());
+    let start = Instant::now();
+    for i in 0..test_size {
+        lsm.put(&data[i], "test");
+    }
+    let duration = start.elapsed();
+    println!(
+        "LSMTree {} put operations time cost is {:?}",
+        test_size, duration
+    );
+
+    let start = Instant::now();
+    for i in 0..test_size {
+        lsm.get(&data[i]);
+    }
+    let duration = start.elapsed();
+    println!(
+        "LSMTree {} get operations time cost is {:?}",
+        test_size, duration
+    );
+
+    let mut hashmap: HashMap<&str, &str> = HashMap::new();
+    let start = Instant::now();
+    for i in 0..test_size {
+        hashmap.insert(&data[i], "test");
+    }
+    let duration = start.elapsed();
+    println!(
+        "HashMap {} put operations time cost is {:?}",
+        test_size, duration
+    );
+
+    lsm.clear();
 }
 
 // #[test]
